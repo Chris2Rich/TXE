@@ -18,6 +18,9 @@
 //{p,a,b,G,n,h}
 mpz_t domain_params[6];
 
+//helper functions
+void ec_multiply(mpz_t res, mpz_t G, mpz_t d);
+
 int main(int argc, char** argv){
     for(int i = 0; i < 6; i++){
         mpz_init2(domain_params[i], 256);
@@ -35,18 +38,26 @@ int main(int argc, char** argv){
     gmp_randstate_t st;
     gmp_randinit_default(st);
     
-    mpz_t dA;
+    mpz_t dA; //Secret key chosen at random
     mpz_init2(dA, 256);
     mpz_urandomm(dA, st, domain_params[4]);
     
     mpz_t QA;
     mpz_init2(QA, 256);
     
+    ec_multiply(QA, domain_params[3], dA); //Alice's public key
+    
+    mpz_t QB; //Bob's public key;
+    mpz_init2(QB, 256);
+    
+    ec_multiply(QB, QB, dA); //Derives shared secret as dA * QB = dA * dB * G = dB * dA * G = dB * QA as multiplication is commutative under modulo and on the points on an elliptic curve
+    
     return 0;
 }
 
-//Use constant time double and add to resist timing attacks - achieves constant time for all inputs by boolean arithmetic rather than branching
-void multiply(mpz_t res, mpz_t G, mpz_t d){
+//Use "constant" time double and add to resist timing attacks - achieves "constant" time for all inputs by boolean arithmetic rather than branching
+//This is not constant time as the algorithm iterates over every element therefore it has ~O(log_2(n)) time complexity however as this is fixed, it is "constant" for all inputs
+void ec_multiply(mpz_t res, mpz_t G, mpz_t d){
     int i = 254;
     mpz_set(res, domain_params[0]);
     
