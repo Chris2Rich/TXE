@@ -1,6 +1,4 @@
-#include <iostream>
 #include <gmp.h>
-#include <stdlib.h>
 #include <time.h>
 #include "../lib/ec_multiply.h"
 #include "../lib/ec_set.h"
@@ -16,7 +14,7 @@
 
 //All of the domain parameters are public
 
-void gen_priv_key(mpz_t res){
+void gen_secret(mpz_t res){
     mpz_t domain_params[6];
     
     gmp_randstate_t st;
@@ -36,12 +34,5 @@ void gen_priv_key(mpz_t res){
     
     ec_multiply(QB, QB, dA, domain_params[0]); //Derives shared secret as dA * QB = dA * dB * G = dB * dA * G = dB * QA as multiplication is commutative under modulo and on the points on an elliptic curve
 
-    // pass shared secret through hash function to destroy any structure
-
-    mpz_set(res, QB);
+    mpz_set(res, QB); //Should be passed through KDF for security
 }
-
-int main(int argc, char** argv){
-    std::cout << "test";
-    return 0;
-} 
