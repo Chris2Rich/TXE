@@ -93,6 +93,14 @@ void sha256(mpz_t res, mpz_t inp){
         K += 1;
     }
     
-    mpz_t limbs[mpz_sizeinbase(inp, 2) / 512];
-    
+    mpz_t blocks[mpz_sizeinbase(inp, 2) / 512];
+    mpz_t mask, tmp;
+    mpz_init_set_str(mask, "0b111111111", 2);
+    mpz_init(tmp);
+    for(int i = 0; i < mpz_sizeinbase(inp, 2) / 512; i++){
+        mpz_set(tmp, inp);
+        mpz_tdiv_r_ui(tmp, tmp, i * 512);
+        mpz_and(tmp, tmp, mask);
+        mpz_set(blocks[i], tmp);
+    }
 }
