@@ -1,31 +1,29 @@
 #include <gmp.h>
 #include <math.h>
-#define ulli unsigned long long int //Used for convenience
-
+#define uint64_t unsigned long long
 //Only works correcly when n is a power of 2
-void split(mpz_t res[], mpz_t inp, ulli n) {
-	ulli size = mpz_sizeinbase(inp, 2) / n;
-	mpz_t mask;
+void split(mpz_t res[], mpz_t inp, uint64_t n) {
+	uint64_t size = mpz_sizeinbase(inp, 2) / n;
+	mpz_t mask, temp;
 	mpz_init_set_ui(mask, 2);
 	mpz_pow_ui(mask, mask, n+1);
 	mpz_sub_ui(mask, mask, 1);
+	mpz_init(temp);
 
-	for(ulli i = 0; i < size; i++) {
-		mpz_t temp;
-		mpz_init_set(temp, inp);
+	for(uint64_t i = 0; i < size; i++) {
+		mpz_set(temp, inp);
 		mpz_tdiv_q_2exp(temp, temp, n*i);
 		mpz_and(temp, temp, mask);
 		mpz_set(res[i], temp);
-
-		mpz_clear(temp);
 	}
 
+	mpz_clear(temp);
 	mpz_clear(mask);
 	return;
 }
 
-
-void r_rotate(mpz_t res, mpz_t inp, ulli n) {
+//replace with uint for speed (using arbitrary precision is pointless with 32bit words)
+void r_rotate(mpz_t res, mpz_t inp, uint64_t n) {
 	mpz_t wrap, temp, mask, mask2, shifter;
 	mpz_init(wrap);
 	mpz_init_set(temp, inp);
@@ -44,8 +42,8 @@ void r_rotate(mpz_t res, mpz_t inp, ulli n) {
 
 	mpz_add(temp, wrap, temp); //add values together
 
-  mpz_pow_ui(mask2, mask2, mpz_sizeinbase(inp, 2));
-  mpz_sub_ui(mask2, mask2, 1);
+	mpz_pow_ui(mask2, mask2, mpz_sizeinbase(inp, 2));
+	mpz_sub_ui(mask2, mask2, 1);
 	mpz_and(res, temp, mask2); //remove residuals
 
 	mpz_clear(wrap);
@@ -148,6 +146,27 @@ void sha256(mpz_t res, mpz_t inp) {
 	mpz_set_str(k[61], "a4506ceb", 16);
 	mpz_set_str(k[62], "bef9a3f7", 16);
 	mpz_set_str(k[63], "c67178f2", 16);
+	
+	mpz_t blocks[mpz_sizeinbase(inp, 2) / 512];
+	
+	for(int i = 0; i < mpz_sizeinbase(inp, 2) / 512; i++){
+	  mpz_init(blocks[i]);
+	}
+	
+	split(blocks, inp, 512);
+	
+	for(int i = 0; i < mpz_sizeinbase(inp, 2) / 512; i++){
+	  mpz_t msa[64];
+	  for(int i = 0; i < 64; i++){
+	    mpz_init(msa[i]);
+	  }
+	  
+	  split(msa, blocks[i], 32);
+	  
+	  for(int i = 16; i < 64; i++){
+	    //TKTK
+	  }
+	}
 
 	for(int i = 0; i < 8; i++) {
 		mpz_clear(h[i]);
