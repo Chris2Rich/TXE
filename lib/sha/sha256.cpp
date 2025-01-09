@@ -3,17 +3,16 @@
 
 //n must be power of 2!
 void split(mpz_t res[], mpz_t inp, size_t n) {
-
-	for(int i = 0; i < mpz_sizeinbase(inp, 2) / n; i++) {
+  size_t size = mpz_sizeinbase(inp, 2) / n;
+	for(int i = 0; i < n; i++) {
 		mpz_t temp;
 		mpz_init_set(temp, inp);
 
-        mpz_t mask;
-        mpz_init_set_ui(mask, i);
-
+    mpz_t mask;
+    mpz_init_set_ui(mask, (unsigned long long int)(pow(2, log2(size)+1)-1) << i* (unsigned long long int)(log2(size)+1));
 		mpz_and(temp, temp, mask);
 
-		mpz_set(res[i], mask);
+		mpz_set(res[i], temp);
 	}
 }
 
@@ -131,15 +130,15 @@ void sha256(mpz_t res, mpz_t inp) {
 int main() {
 	mpz_t a;
 	mpz_init(a);
-	mpz_set_str(a, "AFFBACFABACAAFBE", 16);
+	mpz_set_str(a, "FDBE", 16);
 
-	mpz_t res[8];
-	for(int i = 0; i < 8; i++) {
+	mpz_t res[4];
+	for(int i = 0; i < 4; i++) {
 		mpz_init(res[i]);
 	}
 
-	split(res, a, 8);
-	for(int i = 0; i < 8; i++) {
+	split(res, a, 4);
+	for(int i = 0; i < 4; i++) {
 		gmp_printf("%#Zd\n", res[i]);
 	}
 
