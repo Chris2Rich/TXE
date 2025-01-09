@@ -2,18 +2,18 @@
 #include <math.h>
 #define ulli unsigned long long int
 
-//n must be power of 2!
-void split_512(mpz_t res[], mpz_t inp) {
-    ulli size = mpz_sizeinbase(inp, 2) / 512;
+//Only works correcly when n is a power of 2
+void split(mpz_t res[], mpz_t inp, ulli n) {
+    ulli size = mpz_sizeinbase(inp, 2) / n;
     mpz_t mask;
     mpz_init_set_ui(mask, 2);
-	mpz_pow_ui(mask, mask, 513);
+	mpz_pow_ui(mask, mask, n+1);
 	mpz_sub_ui(mask, mask, 1);
 	
 	for(ulli i = 0; i < size; i++){
 	    mpz_t temp;
 	    mpz_init_set(temp, inp);
-	    mpz_tdiv_q_2exp(temp, temp, 512*i);
+	    mpz_tdiv_q_2exp(temp, temp, n*i);
 	    mpz_and(temp, temp, mask);
 	    mpz_set(res[i], temp);
 	    
@@ -23,6 +23,7 @@ void split_512(mpz_t res[], mpz_t inp) {
 	mpz_clear(mask);
 	return;
 }
+
 
 void r_rotate(mpz_t res) {
 	mpz_t temp, wrap;
@@ -137,14 +138,14 @@ void sha256(mpz_t res, mpz_t inp) {
 
 int main() {
 	mpz_t a;
-	mpz_init_set_str(a, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 16);
+	mpz_init_set_str(a, "FFAABBCCCCAABBCC", 16);
 
 	mpz_t res[4];
 	for(int i = 0; i < 4; i++) {
 		mpz_init(res[i]);
 	}
 
-	split_512(res, a);
+	split(res, a, 32);
 	for(int i = 0; i < 4; i++) {
 		gmp_printf("%#Zx\n", res[i]);
 	}
