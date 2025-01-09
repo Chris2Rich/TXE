@@ -4,50 +4,56 @@
 
 //Only works correcly when n is a power of 2
 void split(mpz_t res[], mpz_t inp, ulli n) {
-    ulli size = mpz_sizeinbase(inp, 2) / n;
-    mpz_t mask;
-    mpz_init_set_ui(mask, 2);
+	ulli size = mpz_sizeinbase(inp, 2) / n;
+	mpz_t mask;
+	mpz_init_set_ui(mask, 2);
 	mpz_pow_ui(mask, mask, n+1);
 	mpz_sub_ui(mask, mask, 1);
-	
-	for(ulli i = 0; i < size; i++){
-	    mpz_t temp;
-	    mpz_init_set(temp, inp);
-	    mpz_tdiv_q_2exp(temp, temp, n*i);
-	    mpz_and(temp, temp, mask);
-	    mpz_set(res[i], temp);
-	    
-	    mpz_clear(temp);
+
+	for(ulli i = 0; i < size; i++) {
+		mpz_t temp;
+		mpz_init_set(temp, inp);
+		mpz_tdiv_q_2exp(temp, temp, n*i);
+		mpz_and(temp, temp, mask);
+		mpz_set(res[i], temp);
+
+		mpz_clear(temp);
 	}
-	
+
 	mpz_clear(mask);
 	return;
 }
 
 
 void r_rotate(mpz_t res, mpz_t inp, ulli n) {
-	mpz_t wrap, temp, temp2, mask, shifter;
+	mpz_t wrap, temp, mask, mask2, shifter;
 	mpz_init(wrap);
 	mpz_init_set(temp, inp);
 	mpz_init_set_ui(mask, 2);
+	mpz_init_set_ui(mask2, 2);
 	mpz_init_set_ui(shifter, 2);
 
-    mpz_pow_ui(mask, mask, n+1);
-    mpz_sub_ui(mask, mask, 1);
-    
-    mpz_and(wrap, mask, temp); //take n smallest bits as wrap
-    mpz_tdiv_q_2exp(temp, temp, n); //divide by 2^n
-    
-    mpz_pow_ui(shifter, shifter, mpz_sizeinbase(temp, 2)); //shifter = 2^(n-len(wrap))
-    mpz_mul(wrap, wrap, shifter); //multiply wrap by shifter
-    
-    mpz_add(temp, wrap, temp); //add values together
-    mpz_mod_ui(res, temp, mpz_sizeinbase(inp, 2))
+	mpz_pow_ui(mask, mask, n+1);
+	mpz_sub_ui(mask, mask, 1);
+
+	mpz_and(wrap, mask, temp); //take n smallest bits as wrap
+	mpz_tdiv_q_2exp(temp, temp, n); //divide by 2^n
+
+	mpz_pow_ui(shifter, shifter, mpz_sizeinbase(temp, 2)); //shifter = 2^(n-len(wrap))
+	mpz_mul(wrap, wrap, shifter); //multiply wrap by shifter
+
+	mpz_add(temp, wrap, temp); //add values together
+
+  mpz_pow_ui(mask2, mask2, mpz_sizeinbase(inp, 2));
+  mpz_sub_ui(mask2, mask2, 1);
+	mpz_and(res, temp, mask2); //remove residuals
 
 	mpz_clear(wrap);
 	mpz_clear(temp);
+	mpz_clear(mask2);
 	mpz_clear(mask);
 	mpz_clear(shifter);
+	return;
 }
 
 void sha256(mpz_t res, mpz_t inp) {
@@ -162,7 +168,7 @@ int main() {
 	}
 
 	split(res, a, 32);
-	r_rotate(res[1], res[1], 17);
+	r_rotate(res[1], res[1], 7);
 	for(int i = 0; i < 4; i++) {
 		gmp_printf("%#Zx\n", res[i]);
 	}
