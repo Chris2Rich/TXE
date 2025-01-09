@@ -26,7 +26,7 @@ void split(mpz_t res[], mpz_t inp, ulli n) {
 
 
 void r_rotate(mpz_t res, mpz_t inp, ulli n) {
-	mpz_t wrap, temp, mask, shifter;
+	mpz_t wrap, temp, temp2, mask, shifter;
 	mpz_init(wrap);
 	mpz_init_set(temp, inp);
 	mpz_init_set_ui(mask, 2);
@@ -38,11 +38,11 @@ void r_rotate(mpz_t res, mpz_t inp, ulli n) {
     mpz_and(wrap, mask, temp); //take n smallest bits as wrap
     mpz_tdiv_q_2exp(temp, temp, n); //divide by 2^n
     
-    mpz_pow_ui(shifter, shifter, n+1 - mpz_sizeinbase(wrap, 2)); //shifter = 2^(n-len(wrap))
-    mpz_sub_ui(shifter, shifter, 1);
+    mpz_pow_ui(shifter, shifter, mpz_sizeinbase(temp, 2)); //shifter = 2^(n-len(wrap))
     mpz_mul(wrap, wrap, shifter); //multiply wrap by shifter
     
-    mpz_add(res, wrap, temp); //add values together
+    mpz_add(temp, wrap, temp); //add values together
+    mpz_mod_ui(res, temp, mpz_sizeinbase(inp, 2))
 
 	mpz_clear(wrap);
 	mpz_clear(temp);
@@ -162,7 +162,7 @@ int main() {
 	}
 
 	split(res, a, 32);
-	r_rotate(res[0], res[0], 7);
+	r_rotate(res[1], res[1], 17);
 	for(int i = 0; i < 4; i++) {
 		gmp_printf("%#Zx\n", res[i]);
 	}
