@@ -1,19 +1,27 @@
 #include <gmp.h>
 #include <math.h>
+#define ulli unsigned long long int
 
 //n must be power of 2!
-void split(mpz_t res[], mpz_t inp, size_t n) {
-  size_t size = mpz_sizeinbase(inp, 2) / n;
-	for(int i = 0; i < n; i++) {
-		mpz_t temp;
-		mpz_init_set(temp, inp);
-
+void split_512(mpz_t res[], mpz_t inp) {
+    ulli size = mpz_sizeinbase(inp, 2) / 512;
     mpz_t mask;
-    mpz_init_set_ui(mask, (unsigned long long int)(pow(2, log2(size)+1)-1) << i* (unsigned long long int)(log2(size)+1));
-		mpz_and(temp, temp, mask);
-
-		mpz_set(res[i], temp);
+    mpz_init_set_ui(mask, 2);
+	mpz_pow_ui(mask, mask, 513);
+	mpz_sub_ui(mask, mask, 1);
+	
+	for(ulli i = 0; i < size; i++){
+	    mpz_t temp;
+	    mpz_init_set(temp, inp);
+	    mpz_tdiv_q_2exp(temp, temp, 512*i);
+	    mpz_and(temp, temp, mask);
+	    mpz_set(res[i], temp);
+	    
+	    mpz_clear(temp);
 	}
+	
+	mpz_clear(mask);
+	return;
 }
 
 void r_rotate(mpz_t res) {
@@ -129,17 +137,16 @@ void sha256(mpz_t res, mpz_t inp) {
 
 int main() {
 	mpz_t a;
-	mpz_init(a);
-	mpz_set_str(a, "FDBE", 16);
+	mpz_init_set_str(a, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 16);
 
 	mpz_t res[4];
 	for(int i = 0; i < 4; i++) {
 		mpz_init(res[i]);
 	}
 
-	split(res, a, 4);
+	split_512(res, a);
 	for(int i = 0; i < 4; i++) {
-		gmp_printf("%#Zd\n", res[i]);
+		gmp_printf("%#Zx\n", res[i]);
 	}
 
 	return 0;
