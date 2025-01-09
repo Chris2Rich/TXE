@@ -3,9 +3,7 @@
 #include "./ec/ec_multiply.h"
 #include "./ec/ec_set.h"
 
-void gen_secret(mpz_t res){
-    mpz_t domain_params[6];
-    
+void gen_secret(mpz_t res, mpz_t domain_params[6]){ 
     gmp_randstate_t st;
     gmp_randinit_default(st);
     
