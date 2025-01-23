@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <vector>
 #include <bitset>
+#include <algorithm>
 #include <iostream>
 
 // how to increase performance -- reduce allocations, switch to using 32bit
@@ -26,6 +27,14 @@ uint32_t rotr(const uint32_t x, int n) {
   return (x >> n) | (x << (-n & mask));
 }
 
+uint32_t ls0(uint32_t x) {
+	return rotr(x, 7) ^ rotr(x, 18) ^ (x >> 3);
+}
+
+uint32_t ls1(uint32_t x) {
+	return rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10);
+}
+
 std::vector<bool> sha256(std::vector<unsigned char> inp) {
   uint32_t h0 = 0x6a09e667;
   uint32_t h1 = 0xbb67ae85;
@@ -36,7 +45,7 @@ std::vector<bool> sha256(std::vector<unsigned char> inp) {
   uint32_t h6 = 0x1f83d9ab;
   uint32_t h7 = 0x5be0cd19;
 
-  uint32_t k[64] {
+  uint32_t K[64] {
    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -48,17 +57,41 @@ std::vector<bool> sha256(std::vector<unsigned char> inp) {
   };
 
   std::vector<bool> bin = stobin(inp);
+  int origi = bin.size();
   std::bitset<64> l(bin.size());
   bin.push_back(true);
-  int K = 0;
-  while((bin.size() + 1 + K) % 512 != 448){
+  int k = 0;
+  while((origi + k + 1) % 512 != 448){
     bin.push_back(false);
-    K++;
+    k++;
   }
   for(int i = 63; i >= 0; i--){
     bin.push_back(l[i]);
   }
-  std::cout << bin.size();
+  
+  std::vector<std::vector<bool>> blocks512_b;
+  for(int i = 0; i < bin.size() / 512; i++){
+    std::vector<bool> tmp;
+    for(int j = 0; j < 512; j++){
+      tmp.push_back(bin[512*i + j]);
+    }
+    blocks512_b.push_back(tmp);
+  }
+
+  std::vector<std::vector<uint32_t>> M;
+  for(int i = 0; i < blocks512_b.size(); i++){
+    std::vector<uint32_t> vec;
+    for(int j = 0; j < 16; j++){
+      uint32_t tmp = 0;
+      for(int k = 0; k < 32; k++){
+        tmp += blocks512_b[i][j*32 + k] << (31 - k);
+      }
+      std::cout << tmp << "\n";
+      vec.push_back(tmp);
+    }
+    M.push_back(vec);
+  }
+
   return bin;
 }
 
