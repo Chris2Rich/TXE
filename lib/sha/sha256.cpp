@@ -21,7 +21,7 @@ std::vector<bool> stobin(std::vector<unsigned char> inp){
 }
 
 // simplifies to single instruction
-uint32_t rotr(const uint32_t x, int n) {
+constexpr inline uint32_t rotr(const uint32_t x, int n) {
   const unsigned int mask = 8 * 32 - 1;
   n &= mask;
   return (x >> n) | (x << (-n & mask));
