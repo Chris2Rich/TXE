@@ -1,4 +1,6 @@
-#include <gmp.h>
-#include <math.h>
+#include <stdint.h>
+#include <vector>
+#include <bitset>
+#include <algorithm>
 
-void sha256(mpz_t res, mpz_t inp);
+std::vector<unsigned char> sha256(std::vector<unsigned char> inp)
