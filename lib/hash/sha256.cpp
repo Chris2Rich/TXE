@@ -6,7 +6,7 @@
 #include <sstream>
 
 // convert string to binary string
-std::vector<bool> stobin(std::vector<unsigned char> inp){
+std::vector<bool> stobin(std::string inp){
   std::vector<bool> res;
   for (int i = 0; i < inp.size(); i++) {
     std::bitset<8> bits(inp[i]);
@@ -35,7 +35,7 @@ uint32_t K[64] {
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-std::string sha256(std::vector<unsigned char> inp) {
+std::string sha256(std::string inp) {
   uint32_t h0 = 0x6a09e667;
   uint32_t h1 = 0xbb67ae85;
   uint32_t h2 = 0x3c6ef372;
@@ -131,11 +131,4 @@ std::string sha256(std::vector<unsigned char> inp) {
   std::stringstream digest;
   digest << std::hex << h0 << h1 << h2 << h3 << h4 << h5 << h6 << h7;
   return digest.str();
-}
-
-int main(){
-    std::vector<unsigned char> a = {};
-    std::string res = sha256(a);
-    std::cout << res;
-    return 0;
 }
