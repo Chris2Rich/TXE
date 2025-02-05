@@ -6,7 +6,7 @@
 #include "./ec/ec_gen_keys.h"
 #include "./hash/sha256.h"
 
-//salted k - append hash of message to private key and hash again, then take logical and of a pseudorandom number x such that 1 <= x <= n-1.
+//using nondeterministic k as increasing structure increases potential attack vectors. there is no good reason to use deterministic k
 
 struct signature_pair {
     mpz_t* residual;
@@ -20,6 +20,22 @@ struct signature_pair {
 
 signature_pair sign(mpz_t domain_params[6], key_pair kp, std::string message){
     std::string e = sha256(message);
+
+    gmp_randstate_t st;
+    gmp_randinit_default(st);
+    
+    mpz_t k;
+    mpz_init2(k, 256);
+    mpz_urandomm(k, st, domain_params[4]);
+
+    mpz_t x;
+    mpz_init2(x, 256);
+    ec_multiply(x, domain_params[3], k, domain_params[0]);
+
+    mpz_t r;
+    mpz_init2(r, 256);
+    mpz_mod(r, x, domain_params[4]);
+
     
 }
 
