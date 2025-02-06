@@ -1,5 +1,4 @@
 # TODO
-- SHA2 implementation for ECDSA
-- add key validation
-- TEST
-- add key derivation function for secret after secret and public key are combined
+- finish ec_verify, allow for verification of points on a given curve for ecdsa verification to work properly.
+- begin working on headers and mining algorithm !!!!! :D
+- add lib/types for all types (keypair and signaturepair), prevents locality of types and allows for structs to be made simpler.

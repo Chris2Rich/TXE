@@ -2,7 +2,6 @@
 #include <time.h>
 #include <string>
 #include "./ec/ec_multiply.h"
-#include "./ec/ec_set.h"
 #include "./ec/ec_gen_keys.h"
 #include "./hash/sha256.h"
 
@@ -19,26 +18,49 @@ struct signature_pair {
 };
 
 signature_pair sign(mpz_t domain_params[6], key_pair kp, std::string message){
-    std::string e = sha256(message);
+
+    mpz_t z,k,x,r,s, tmp;
+    mpz_init_set_str(z, sha256(message), 16);
+    mpz_init2(k, 256);
+    mpz_init2(x, 256);
+    mpz_init2(r, 256);
+    mpz_init2(s, 256);
+    mpz_init2(tmp, 256);
+
+    secure:
 
     gmp_randstate_t st;
     gmp_randinit_default(st);
     
-    mpz_t k;
-    mpz_init2(k, 256);
     mpz_urandomm(k, st, domain_params[4]);
 
-    mpz_t x;
-    mpz_init2(x, 256);
     ec_multiply(x, domain_params[3], k, domain_params[0]);
 
-    mpz_t r;
-    mpz_init2(r, 256);
-    mpz_mod(r, x, domain_params[4]);
 
+    mpz_tdiv_r(r, x, domain_params[4]);
     
+    if(mpz_cmp_ui (r,0) == 0){
+        goto secure;
+    }
+
+    mpz_invert(k, k, domain_params[4]);
+    mpz_mul(tmp, r, kp.prvkey);
+    mpz_add(tmp, tmp, z);
+    mpz_mul(s, k, tmp);
+
+    if(mpz_cmp_ui (s,0) == 0){
+        goto secure;
+    }
+
+    mpz_clear(z);
+    mpz_clear(k);
+    mpz_clear(x);
+    mpz_clear(tmp);
+
+    return signature_pair(&r, &s);
 }
 
 bool verify(mpz_t domain_params[6], signature_pair sp, key_pair kp){
     return 0;
 }
+ 

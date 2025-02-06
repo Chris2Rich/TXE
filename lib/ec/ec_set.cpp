@@ -1,6 +1,6 @@
 #include <gmp.h>
 
-//secp256k1 - also used in bitcoin - this has KNOWN vulnerabilities
+//secp256k1 - also used in bitcoin - uses compressed generator point to reduce attack surface area when dealing with modular arithmetic based timing attacks
 //{p,a,b,G,n,h}
 void secp256k1(mpz_t res[6]){        
         mpz_init_set_str(res[0], "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16);
