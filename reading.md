@@ -3,6 +3,7 @@
 - https://bitcoin.org/bitcoin.pdf
 - https://www.getmonero.org/resources/research-lab/
 - https://downloads.getmonero.org/whitepaper_annotated.pdf
+- https://eprint.iacr.org/2007/286.pdf
 # Read
 - MIT OCW https://ocw.mit.edu/courses/mas-s62-cryptocurrency-engineering-and-design-spring-2018/
 - Kaspa Forum https://research.kas.pa/t/a-proposal-for-finality-in-ghostdag/66/2

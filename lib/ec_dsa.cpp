@@ -37,14 +37,14 @@ signature_pair sign(mpz_t domain_params[6], key_pair kp, std::string message){
     ec_multiply(x, domain_params[3], k, domain_params[0]);
 
 
-    mpz_tdiv_r(r, x, domain_params[4]);
+    mpz_mod(r, x, domain_params[4]);
     
     if(mpz_cmp_ui (r,0) == 0){
         goto secure;
     }
 
     mpz_invert(k, k, domain_params[4]);
-    mpz_mul(tmp, r, kp.prvkey);
+    mpz_mul(tmp, r, *kp.prvkey);
     mpz_add(tmp, tmp, z);
     mpz_mul(s, k, tmp);
 

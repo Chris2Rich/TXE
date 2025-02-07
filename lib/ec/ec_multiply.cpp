@@ -19,6 +19,8 @@ void ec_multiply(mpz_t res, mpz_t G, mpz_t d, mpz_t p){
         i -= 1;
     }
     
+    mpz_mod(res, res, p); //avoids weirdness with negative numbers as it increases determinism if modulus is applied here
+
     mpz_clear(flag);
     return;
 }
