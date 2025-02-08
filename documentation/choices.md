@@ -1,0 +1,1 @@
+Using ed25519 from Crypto++ for a secure implementation of ecdsa (fast and very secure)

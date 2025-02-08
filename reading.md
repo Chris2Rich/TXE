@@ -7,6 +7,9 @@
 # Read
 - MIT OCW https://ocw.mit.edu/courses/mas-s62-cryptocurrency-engineering-and-design-spring-2018/
 - Kaspa Forum https://research.kas.pa/t/a-proposal-for-finality-in-ghostdag/66/2
+- https://eprint.iacr.org/2015/625.pdf
+- https://cr.yp.to/ecdh/curve25519-20060209.pdf
+
 
    ### Layer 1 - Headerchain
    ### Blockchain (easy)
