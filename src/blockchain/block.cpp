@@ -1,4 +1,4 @@
-#include <cryptlib.h>
+#include "../../cryptopp/cryptlib.h"
 #include "xed25519.h"
 #include "filters.h"
 #include "files.h"
