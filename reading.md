@@ -1,6 +1,8 @@
 # To Read
 - https://eprint.iacr.org/2015/308.pdf
 - https://research.kas.pa/t/a-proposal-for-finality-in-ghostdag/66/2
+- https://zips.z.cash/protocol/protocol.pdf
+- http://zerocash-project.org/media/pdf/zerocash-oakland2014.pdf
 
 # Read
 
