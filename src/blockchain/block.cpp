@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "./src/tx/tx.cpp"
+#include "../tx/tx.cpp"
 
 struct header {
     unsigned char version; // if version changes, this allows for backwards compatability
@@ -12,6 +12,10 @@ struct header {
 struct block {
     unsigned char id[64]; //stored in db and ID is used for rapid indexing into b-tree
     tx tx_list[];
+
+    unsigned char* create_merkel(){
+        return nullptr;
+    };
 };
 
 int main(){
