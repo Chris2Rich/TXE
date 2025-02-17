@@ -11,6 +11,9 @@
 - https://downloads.getmonero.org/whitepaper_annotated.pdf
 - https://bitcoin.org/bitcoin.pdf
 
+## low-level overview
+- https://web.getmonero.org/library/Zero-to-Monero-2-0-0.pdf
+
 ## curve parameters and their properties
 - https://eprint.iacr.org/2015/625.pdf
 - https://cr.yp.to/ecdh/curve25519-20060209.pdf
