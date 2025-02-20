@@ -3,7 +3,8 @@ struct tx{
     //inputs
     //outputs
 
-    unsigned char* stringify(){
-        return nullptr;
-    };
+    const unsigned char* stringify(){
+        const unsigned char* res = (const unsigned char*)"Test"; 
+        return res;
+    }
 };
