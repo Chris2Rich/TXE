@@ -15,7 +15,7 @@ struct tx_out{
 
 struct tx{
     unsigned char version;
-    unsigned char id[64]; //functions as a nonce
+    unsigned char id[64]; //generated from double hash of the data it contains
     
     tx_in* inputs;
     unsigned char input_n;
