@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "../tx/tx.cpp"
-#include "../crypto/sha512.cpp"
+#include "../crypto/sha512.h"
 #include <math.h>
 #include <cstring>
 #include <vector>
@@ -16,11 +16,11 @@ struct header {
 
 struct block {
     unsigned char id[64]; //stored in db and ID is used for rapid indexing into b-tree
+    std::vector<std::vector<unsigned char>> merkletree; //first level  in [0], 2nd level in [1,2] 3rd level in [3,4,5,6] etc 
     std::vector<tx> tx_list;
 
     //returns sha512 of the merkle root of the block(more random)
     void create_merkle_root(unsigned char* res) {
-        CryptoPP::SHA512 hash;
         std::vector<std::vector<unsigned char>> nodes;
         std::vector<unsigned char> digest(64);
         unsigned char zero_hash[64] = {0};
@@ -40,12 +40,10 @@ struct block {
         // Create leaf nodes
         for (size_t i = 0; i < leaf_count; i++) {
             if (i < tx_count) {
-                hash.Update(tx_list[i].id, 64);
+                nodes.push_back(hash512(tx_list[i].id, 64));
             } else {
-                hash.Update(zero_hash, 64);
+                nodes.push_back(hash512(zero_hash, 1));
             }
-            hash.Final(digest.data());
-            nodes.push_back(digest);
         }
 
         // Build Merkle tree
@@ -59,16 +57,11 @@ struct block {
                     memcpy(concat.data() + 64, nodes[i + 1].data(), 64);
                 } else {
                     // Hash the last node with itself if odd number
-                    hash.Update(nodes[i].data(), 64);
-                    hash.Update(nodes[i].data(), 64);
-                    hash.Final(digest.data());
-                    new_nodes.push_back(digest);
+                    new_nodes.push_back(hash512(hash512(nodes[i])));
                     break;
                 }
 
-                hash.Update(concat.data(), 128);
-                hash.Final(digest.data());
-                new_nodes.push_back(digest);
+                new_nodes.push_back(hash512(concat));
             }
 
             nodes = new_nodes;

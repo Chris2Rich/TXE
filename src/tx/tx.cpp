@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <cstring>
-#include "../crypto/sha512.cpp"
+#include "../crypto/sha512.h"
 #include <vector>
 
 struct tx_in{
