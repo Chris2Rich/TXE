@@ -1,9 +1,8 @@
 #include <stdint.h>
 #include "../tx/tx.cpp"
+#include "../crypto/sha512.cpp"
 #include <math.h>
 #include <cstring>
-#include "../../cryptopp/cryptlib.h"
-#include "../../cryptopp/sha.h"
 #include <vector>
 
 struct header {

@@ -1,8 +1,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <cstring>
-#include "../../cryptopp/cryptlib.h"
-#include "../../cryptopp/sha.h"
+#include "../crypto/sha512.cpp"
 #include <vector>
 
 struct tx_in{
