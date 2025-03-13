@@ -1,0 +1,3 @@
+/workspaces/ecc/TXE-core/build/CMakeFiles/rebuild_cache.dir
+/workspaces/ecc/TXE-core/build/CMakeFiles/edit_cache.dir
+/workspaces/ecc/TXE-core/build/CMakeFiles/blockchain.dir
