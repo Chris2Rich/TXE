@@ -53,7 +53,7 @@ CMAKE_BINARY_DIR = /workspaces/ecc/TXE-core/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/blockchain.dir/all
+all: CMakeFiles/TXE.dir/all
 
 .PHONY : all
 
@@ -63,36 +63,36 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/blockchain.dir/clean
+clean: CMakeFiles/TXE.dir/clean
 
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/blockchain.dir
+# Target rules for target CMakeFiles/TXE.dir
 
 # All Build rule for target.
-CMakeFiles/blockchain.dir/all:
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/depend
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=1,2 "Built target blockchain"
-.PHONY : CMakeFiles/blockchain.dir/all
+CMakeFiles/TXE.dir/all:
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/depend
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=1,2 "Built target TXE"
+.PHONY : CMakeFiles/TXE.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/blockchain.dir/rule: cmake_check_build_system
+CMakeFiles/TXE.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /workspaces/ecc/TXE-core/build/CMakeFiles 2
-	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/blockchain.dir/all
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/TXE.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /workspaces/ecc/TXE-core/build/CMakeFiles 0
-.PHONY : CMakeFiles/blockchain.dir/rule
+.PHONY : CMakeFiles/TXE.dir/rule
 
 # Convenience name for target.
-blockchain: CMakeFiles/blockchain.dir/rule
+TXE: CMakeFiles/TXE.dir/rule
 
-.PHONY : blockchain
+.PHONY : TXE
 
 # clean rule for target.
-CMakeFiles/blockchain.dir/clean:
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/clean
-.PHONY : CMakeFiles/blockchain.dir/clean
+CMakeFiles/TXE.dir/clean:
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/clean
+.PHONY : CMakeFiles/TXE.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

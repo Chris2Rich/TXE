@@ -1,0 +1,14 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/workspaces/ecc/TXE-core/src/main.cpp
+TXE-core/include/tx.h
+/workspaces/ecc/TXE-core/src/TXE-core/include/tx.h
+TXE-core/include/block.h
+/workspaces/ecc/TXE-core/src/TXE-core/include/block.h
+

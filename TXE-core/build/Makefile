@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named blockchain
+# Target rules for targets named TXE
 
 # Build rule for target.
-blockchain: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 blockchain
-.PHONY : blockchain
+TXE: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 TXE
+.PHONY : TXE
 
 # fast build rule for target.
-blockchain/fast:
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/build
-.PHONY : blockchain/fast
+TXE/fast:
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/build
+.PHONY : TXE/fast
 
 src/main.o: src/main.cpp.o
 
@@ -129,7 +129,7 @@ src/main.o: src/main.cpp.o
 
 # target to build an object file
 src/main.cpp.o:
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/src/main.cpp.o
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/main.cpp.o
 .PHONY : src/main.cpp.o
 
 src/main.i: src/main.cpp.i
@@ -138,7 +138,7 @@ src/main.i: src/main.cpp.i
 
 # target to preprocess a source file
 src/main.cpp.i:
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/src/main.cpp.i
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/main.cpp.i
 .PHONY : src/main.cpp.i
 
 src/main.s: src/main.cpp.s
@@ -147,7 +147,7 @@ src/main.s: src/main.cpp.s
 
 # target to generate assembly for a file
 src/main.cpp.s:
-	$(MAKE) -f CMakeFiles/blockchain.dir/build.make CMakeFiles/blockchain.dir/src/main.cpp.s
+	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
 # Help Target
@@ -158,7 +158,7 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... blockchain"
+	@echo "... TXE"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
