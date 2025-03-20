@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/TXE.dir/src/main.cpp.o  -o TXE  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 
+/usr/bin/c++     CMakeFiles/TXE.dir/src/main.cpp.o CMakeFiles/TXE.dir/src/blockchain/block.cpp.o CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o CMakeFiles/TXE.dir/src/tx/tx.cpp.o  -o TXE  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

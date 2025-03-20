@@ -1,5 +1,5 @@
-#include "include/tx.h"
-#include "../include/block.h"
+#include "/workspaces/ecc/TXE-core/include/tx.h"
+#include "/workspaces/ecc/TXE-core/include/block.h"
 
 int main(){
     block bloc;

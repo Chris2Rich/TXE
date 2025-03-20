@@ -1,7 +1,11 @@
+#ifndef _TX_H
+
+#define _TX_H 
+
 #include <stdint.h>
 #include <math.h>
 #include <cstring>
-#include "TXE-core/include/sha512.h"
+#include "/workspaces/ecc/TXE-core/include/sha512.h"
 #include <vector>
 
 struct tx_in{
@@ -20,7 +24,8 @@ struct tx{
     std::vector<tx_in> inputs;
     std::vector<tx_out> outputs;
 
-    tx(unsigned char i){}
+    tx(unsigned char i);
 
-    const unsigned char* create_tx_id(){}
+    const unsigned char* create_tx_id();
 };
+#endif // _TX_H 

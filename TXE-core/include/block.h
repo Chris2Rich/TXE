@@ -1,6 +1,10 @@
+#ifndef _BLOCK_H
+
+#define _BLOCK_H 
+
 #include <stdint.h>
-#include "TXE-core/include/tx.h"
-#include "TXE-core/include/sha512.h"
+#include "/workspaces/ecc/TXE-core/include/tx.h"
+#include "/workspaces/ecc/TXE-core/include/sha512.h"
 #include <math.h>
 #include <cstring>
 #include <vector>
@@ -20,5 +24,7 @@ struct block {
     std::vector<tx> tx_list;
 
     //returns sha512 of the merkle root of the block(more random)
-    void create_merkle_root(unsigned char* res) {}
+    void create_merkle_root(unsigned char* res);
 };
+
+#endif // _BLOCK_H

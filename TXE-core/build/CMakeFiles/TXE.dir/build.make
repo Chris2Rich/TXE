@@ -70,19 +70,79 @@ CMakeFiles/TXE.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TXE.dir/src/main.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /workspaces/ecc/TXE-core/src/main.cpp -o CMakeFiles/TXE.dir/src/main.cpp.s
 
+CMakeFiles/TXE.dir/src/blockchain/block.cpp.o: CMakeFiles/TXE.dir/flags.make
+CMakeFiles/TXE.dir/src/blockchain/block.cpp.o: ../src/blockchain/block.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/TXE.dir/src/blockchain/block.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/TXE.dir/src/blockchain/block.cpp.o -c /workspaces/ecc/TXE-core/src/blockchain/block.cpp
+
+CMakeFiles/TXE.dir/src/blockchain/block.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TXE.dir/src/blockchain/block.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /workspaces/ecc/TXE-core/src/blockchain/block.cpp > CMakeFiles/TXE.dir/src/blockchain/block.cpp.i
+
+CMakeFiles/TXE.dir/src/blockchain/block.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TXE.dir/src/blockchain/block.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /workspaces/ecc/TXE-core/src/blockchain/block.cpp -o CMakeFiles/TXE.dir/src/blockchain/block.cpp.s
+
+CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o: CMakeFiles/TXE.dir/flags.make
+CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o: ../src/crypto/sha512.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o -c /workspaces/ecc/TXE-core/src/crypto/sha512.cpp
+
+CMakeFiles/TXE.dir/src/crypto/sha512.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TXE.dir/src/crypto/sha512.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /workspaces/ecc/TXE-core/src/crypto/sha512.cpp > CMakeFiles/TXE.dir/src/crypto/sha512.cpp.i
+
+CMakeFiles/TXE.dir/src/crypto/sha512.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TXE.dir/src/crypto/sha512.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /workspaces/ecc/TXE-core/src/crypto/sha512.cpp -o CMakeFiles/TXE.dir/src/crypto/sha512.cpp.s
+
+CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o: CMakeFiles/TXE.dir/flags.make
+CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o: ../src/crypto/tcrs.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o -c /workspaces/ecc/TXE-core/src/crypto/tcrs.cpp
+
+CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /workspaces/ecc/TXE-core/src/crypto/tcrs.cpp > CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.i
+
+CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /workspaces/ecc/TXE-core/src/crypto/tcrs.cpp -o CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.s
+
+CMakeFiles/TXE.dir/src/tx/tx.cpp.o: CMakeFiles/TXE.dir/flags.make
+CMakeFiles/TXE.dir/src/tx/tx.cpp.o: ../src/tx/tx.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/TXE.dir/src/tx/tx.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/TXE.dir/src/tx/tx.cpp.o -c /workspaces/ecc/TXE-core/src/tx/tx.cpp
+
+CMakeFiles/TXE.dir/src/tx/tx.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TXE.dir/src/tx/tx.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /workspaces/ecc/TXE-core/src/tx/tx.cpp > CMakeFiles/TXE.dir/src/tx/tx.cpp.i
+
+CMakeFiles/TXE.dir/src/tx/tx.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TXE.dir/src/tx/tx.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /workspaces/ecc/TXE-core/src/tx/tx.cpp -o CMakeFiles/TXE.dir/src/tx/tx.cpp.s
+
 # Object files for target TXE
 TXE_OBJECTS = \
-"CMakeFiles/TXE.dir/src/main.cpp.o"
+"CMakeFiles/TXE.dir/src/main.cpp.o" \
+"CMakeFiles/TXE.dir/src/blockchain/block.cpp.o" \
+"CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o" \
+"CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o" \
+"CMakeFiles/TXE.dir/src/tx/tx.cpp.o"
 
 # External object files for target TXE
 TXE_EXTERNAL_OBJECTS =
 
 TXE: CMakeFiles/TXE.dir/src/main.cpp.o
+TXE: CMakeFiles/TXE.dir/src/blockchain/block.cpp.o
+TXE: CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o
+TXE: CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o
+TXE: CMakeFiles/TXE.dir/src/tx/tx.cpp.o
 TXE: CMakeFiles/TXE.dir/build.make
 TXE: /usr/lib/x86_64-linux-gnu/libssl.so
 TXE: /usr/lib/x86_64-linux-gnu/libcrypto.so
 TXE: CMakeFiles/TXE.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable TXE"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable TXE"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/TXE.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
