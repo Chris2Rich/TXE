@@ -1,6 +1,6 @@
 #ifndef _TX_H
 
-#define _TX_H 
+#define _TX_H
 
 #include <stdint.h>
 #include <math.h>
@@ -23,9 +23,15 @@ struct tx{
     
     std::vector<tx_in> inputs;
     std::vector<tx_out> outputs;
-
-    tx(unsigned char i);
-
-    const unsigned char* create_tx_id();
+    
+    tx(unsigned char i){
+        unsigned char v[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,i};
+        memcpy(id, v, 64);
+    }
+    
+    const unsigned char* create_tx_id(){
+        const unsigned char* res = (const unsigned char*)"Test"; 
+        return res;
+    }
 };
-#endif // _TX_H 
+#endif // _TX_H

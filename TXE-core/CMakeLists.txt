@@ -8,10 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Explicitly list source files
 set(SOURCES
     src/main.cpp
-    src/blockchain/block.cpp
-    src/crypto/sha512.cpp
-    src/crypto/tcrs.cpp
-    src/tx/tx.cpp
 )
 
 # Create the executable
