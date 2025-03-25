@@ -48,7 +48,7 @@ struct block {
                 nodes.push_back(hash512(zero_hash, 64));
             }
         }
-        
+
         // Build Merkle tree
         while (nodes.size() > 1) {
             std::vector<std::vector<unsigned char>> new_nodes;

@@ -1,5 +1,6 @@
 #include "/workspaces/ecc/TXE-core/include/tx.h"
 #include "/workspaces/ecc/TXE-core/include/block.h"
+#include "/workspaces/ecc/TXE-core/include/sha512.h"
 #include <iostream>
 #include <iomanip>
 
@@ -13,14 +14,16 @@ std::string charArrayToHexString(const unsigned char* arr, size_t length) {
 }
 
 int main(){
-    block bloc;
-    tx a(61);
-    tx b(62);
-    tx c(63);
-    tx d(64);
     unsigned char res[64];
-    bloc.tx_list = {a,b,c,d};
-    bloc.create_merkle_root(res);
+
+    //merkle root test
+    // block bloc;
+    // tx a(5);
+    // bloc.tx_list = {a};
+    // bloc.create_merkle_root(res);
+
+
+
     std::cout << charArrayToHexString(res, 32);
     return 0;
 }

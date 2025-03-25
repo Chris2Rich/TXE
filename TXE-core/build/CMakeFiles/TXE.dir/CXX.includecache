@@ -7,6 +7,8 @@
 #IncludeRegexTransform: 
 
 /workspaces/ecc/TXE-core/include/block.h
+iostream
+-
 stdint.h
 -
 /workspaces/ecc/TXE-core/include/tx.h
