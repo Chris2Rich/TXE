@@ -169,87 +169,6 @@ TXE/fast:
 	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/build
 .PHONY : TXE/fast
 
-src/blockchain/block.o: src/blockchain/block.cpp.o
-
-.PHONY : src/blockchain/block.o
-
-# target to build an object file
-src/blockchain/block.cpp.o:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/blockchain/block.cpp.o
-.PHONY : src/blockchain/block.cpp.o
-
-src/blockchain/block.i: src/blockchain/block.cpp.i
-
-.PHONY : src/blockchain/block.i
-
-# target to preprocess a source file
-src/blockchain/block.cpp.i:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/blockchain/block.cpp.i
-.PHONY : src/blockchain/block.cpp.i
-
-src/blockchain/block.s: src/blockchain/block.cpp.s
-
-.PHONY : src/blockchain/block.s
-
-# target to generate assembly for a file
-src/blockchain/block.cpp.s:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/blockchain/block.cpp.s
-.PHONY : src/blockchain/block.cpp.s
-
-src/crypto/sha512.o: src/crypto/sha512.cpp.o
-
-.PHONY : src/crypto/sha512.o
-
-# target to build an object file
-src/crypto/sha512.cpp.o:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/crypto/sha512.cpp.o
-.PHONY : src/crypto/sha512.cpp.o
-
-src/crypto/sha512.i: src/crypto/sha512.cpp.i
-
-.PHONY : src/crypto/sha512.i
-
-# target to preprocess a source file
-src/crypto/sha512.cpp.i:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/crypto/sha512.cpp.i
-.PHONY : src/crypto/sha512.cpp.i
-
-src/crypto/sha512.s: src/crypto/sha512.cpp.s
-
-.PHONY : src/crypto/sha512.s
-
-# target to generate assembly for a file
-src/crypto/sha512.cpp.s:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/crypto/sha512.cpp.s
-.PHONY : src/crypto/sha512.cpp.s
-
-src/crypto/tcrs.o: src/crypto/tcrs.cpp.o
-
-.PHONY : src/crypto/tcrs.o
-
-# target to build an object file
-src/crypto/tcrs.cpp.o:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.o
-.PHONY : src/crypto/tcrs.cpp.o
-
-src/crypto/tcrs.i: src/crypto/tcrs.cpp.i
-
-.PHONY : src/crypto/tcrs.i
-
-# target to preprocess a source file
-src/crypto/tcrs.cpp.i:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.i
-.PHONY : src/crypto/tcrs.cpp.i
-
-src/crypto/tcrs.s: src/crypto/tcrs.cpp.s
-
-.PHONY : src/crypto/tcrs.s
-
-# target to generate assembly for a file
-src/crypto/tcrs.cpp.s:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/crypto/tcrs.cpp.s
-.PHONY : src/crypto/tcrs.cpp.s
-
 src/main.o: src/main.cpp.o
 
 .PHONY : src/main.o
@@ -277,33 +196,6 @@ src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/tx/tx.o: src/tx/tx.cpp.o
-
-.PHONY : src/tx/tx.o
-
-# target to build an object file
-src/tx/tx.cpp.o:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/tx/tx.cpp.o
-.PHONY : src/tx/tx.cpp.o
-
-src/tx/tx.i: src/tx/tx.cpp.i
-
-.PHONY : src/tx/tx.i
-
-# target to preprocess a source file
-src/tx/tx.cpp.i:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/tx/tx.cpp.i
-.PHONY : src/tx/tx.cpp.i
-
-src/tx/tx.s: src/tx/tx.cpp.s
-
-.PHONY : src/tx/tx.s
-
-# target to generate assembly for a file
-src/tx/tx.cpp.s:
-	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/src/tx/tx.cpp.s
-.PHONY : src/tx/tx.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -317,21 +209,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... TXE"
-	@echo "... src/blockchain/block.o"
-	@echo "... src/blockchain/block.i"
-	@echo "... src/blockchain/block.s"
-	@echo "... src/crypto/sha512.o"
-	@echo "... src/crypto/sha512.i"
-	@echo "... src/crypto/sha512.s"
-	@echo "... src/crypto/tcrs.o"
-	@echo "... src/crypto/tcrs.i"
-	@echo "... src/crypto/tcrs.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/tx/tx.o"
-	@echo "... src/tx/tx.i"
-	@echo "... src/tx/tx.s"
 .PHONY : help
 
 

@@ -74,12 +74,12 @@ clean: CMakeFiles/TXE.dir/clean
 CMakeFiles/TXE.dir/all:
 	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/depend
 	$(MAKE) -f CMakeFiles/TXE.dir/build.make CMakeFiles/TXE.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target TXE"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=1,2 "Built target TXE"
 .PHONY : CMakeFiles/TXE.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/TXE.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /workspaces/ecc/TXE-core/build/CMakeFiles 6
+	$(CMAKE_COMMAND) -E cmake_progress_start /workspaces/ecc/TXE-core/build/CMakeFiles 2
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/TXE.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /workspaces/ecc/TXE-core/build/CMakeFiles 0
 .PHONY : CMakeFiles/TXE.dir/rule

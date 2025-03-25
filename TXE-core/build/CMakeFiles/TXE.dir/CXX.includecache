@@ -6,6 +6,20 @@
 
 #IncludeRegexTransform: 
 
+/workspaces/ecc/TXE-core/include/block.h
+stdint.h
+-
+/workspaces/ecc/TXE-core/include/tx.h
+-
+/workspaces/ecc/TXE-core/include/sha512.h
+-
+math.h
+-
+cstring
+-
+vector
+-
+
 /workspaces/ecc/TXE-core/include/sha512.h
 openssl/sha.h
 -
@@ -26,39 +40,9 @@ cstring
 vector
 -
 
-/workspaces/ecc/TXE-core/src/blockchain/block.cpp
-stdint.h
--
+/workspaces/ecc/TXE-core/src/main.cpp
 /workspaces/ecc/TXE-core/include/tx.h
 -
-/workspaces/ecc/TXE-core/include/sha512.h
--
-math.h
--
-cstring
--
-vector
--
-
-/workspaces/ecc/TXE-core/src/crypto/sha512.cpp
-openssl/sha.h
--
-vector
--
-iostream
--
-
-/workspaces/ecc/TXE-core/src/crypto/tcrs.cpp
-
-/workspaces/ecc/TXE-core/src/tx/tx.cpp
-stdint.h
--
-math.h
--
-cstring
--
-/workspaces/ecc/TXE-core/include/sha512.h
--
-vector
+/workspaces/ecc/TXE-core/include/block.h
 -
 
