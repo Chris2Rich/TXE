@@ -43,7 +43,7 @@ struct block {
         // Create leaf nodes
         for (size_t i = 0; i < leaf_count; i++) {
             if (i < tx_count) {
-                nodes.push_back(hash512(tx_list[i].id, (64)));
+                nodes.push_back(hash512(tx_list[i].id, 64));
             } else {
                 nodes.push_back(hash512(zero_hash, 64));
             }

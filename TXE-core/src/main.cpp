@@ -14,16 +14,17 @@ std::string charArrayToHexString(const unsigned char* arr, size_t length) {
 }
 
 int main(){
-    unsigned char res[64];
-
-    //merkle root test
+    unsigned char res[64] {5};
+    // merkle root test
     // block bloc;
     // tx a(5);
     // bloc.tx_list = {a};
     // bloc.create_merkle_root(res);
 
-
-
-    std::cout << charArrayToHexString(res, 32);
+    for(int i = 0; i < 64; i++){
+        std::cout << (int)res[i];
+    }
+    std::cout << "\n";
+    std::cout << charArrayToHexString(hash512(res, 64).data(), 32);
     return 0;
 }

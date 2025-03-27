@@ -7,8 +7,6 @@
 #IncludeRegexTransform: 
 
 /workspaces/ecc/TXE-core/include/block.h
-iostream
--
 stdint.h
 -
 /workspaces/ecc/TXE-core/include/tx.h
@@ -46,6 +44,8 @@ vector
 /workspaces/ecc/TXE-core/include/tx.h
 -
 /workspaces/ecc/TXE-core/include/block.h
+-
+/workspaces/ecc/TXE-core/include/sha512.h
 -
 iostream
 -
