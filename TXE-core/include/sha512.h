@@ -6,7 +6,8 @@
 #include <iostream>
 
 // Low-level SHA-512, operates on arrays
-std::vector<unsigned char> hash512(unsigned char* v, size_t n) {
+std::vector<unsigned char> hash512(unsigned char *v, size_t n)
+{
     SHA512_CTX ctx;
     unsigned char buffer[SHA512_DIGEST_LENGTH];
 
@@ -20,12 +21,14 @@ std::vector<unsigned char> hash512(unsigned char* v, size_t n) {
 }
 
 // Low-level SHA-512, operates on vectors
-std::vector<unsigned char> hash512(const std::vector<unsigned char>& v) {
+std::vector<unsigned char> hash512(const std::vector<unsigned char> &v)
+{
     SHA512_CTX ctx;
     unsigned char buffer[SHA512_DIGEST_LENGTH];
 
     SHA512_Init(&ctx);
-    if (!v.empty()) {
+    if (!v.empty())
+    {
         SHA512_Update(&ctx, &v[0], v.size());
     }
     SHA512_Final(buffer, &ctx);
