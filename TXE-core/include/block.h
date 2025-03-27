@@ -14,8 +14,8 @@ struct header
     unsigned char id[64];                 // hash of concatenation of ancestors' data - allows for unique ids with ancestors
     std::vector<unsigned char> ancestors; // concatenation of the ids of the ancestors a block has.
     unsigned char nonce[64];              // for nonce space, this should be equal to the size of the domain of the hash function
+    uint32_t difficulty;                  // proposed difficulty, verified by consensus
     unsigned char merkel_root[64];
-    uint32_t difficulty; // proposed difficulty, verified by consensus
 };
 
 struct block
