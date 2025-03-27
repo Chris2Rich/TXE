@@ -1,3 +1,5 @@
 # TODO
-- implement either zk-snark or ring signatures
-- begin working on headers and mining algorithm !!!!!
+- build database using mysql
+- build mining algorithm
+- implement TCRS
+- implement transaction verification (range proofs + UXTO)

@@ -10,12 +10,18 @@
 
 struct header
 {
-    unsigned int version;                 // if version changes, this allows for backwards compatability
-    unsigned char id[64];                 // hash of concatenation of ancestors' data - allows for unique ids with ancestors
-    std::vector<unsigned char> ancestors; // concatenation of the ids of the ancestors a block has.
-    unsigned char nonce[64];              // for nonce space, this should be equal to the size of the domain of the hash function
-    uint32_t difficulty;                  // proposed difficulty, verified by consensus
+    unsigned int version;                   // if version changes, this allows for backwards compatability
+    unsigned char id[64];                   // hash of header's data + concatenation of ancestors' headers - allows for unique ids with ancestors
+    std::vector<unsigned char *> ancestors; // concatenation of the ids of the ancestors a block has.
+    unsigned char nonce[64];                // for nonce space, this should be equal to the size of the domain of the hash function
+    uint32_t difficulty;                    // proposed difficulty, verified by consensus
+    uint64_t timestamp;                     // in seconds because the speed of light is 3e8ms-1
     unsigned char merkel_root[64];
+
+    void create_block_id(unsigned char *id)
+    {
+        std::vector<unsigned char> concat;
+    }
 };
 
 struct block
