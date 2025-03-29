@@ -5,6 +5,7 @@
 #include "/workspaces/ecc/TXE-core/include/tx.h"
 #include "/workspaces/ecc/TXE-core/include/sha512.h"
 #include "/workspaces/ecc/TXE-core/include/db.h"
+#include "/workspaces/ecc/TXE-core/include/util.h"
 #include <rocksdb/db.h>
 #include <math.h>
 #include <cstring>
@@ -14,19 +15,64 @@
 struct header
 {
     unsigned int version;                   // if version changes, this allows for backwards compatability
-    unsigned char id[64];                   // hash of header's data (excluding id field) + concatenation of ancestors' headers - allows for unique ids with ancestors
+    unsigned char id[64];                   // hash of header's data (excluding id field) + ancestors' headers - allows for unique ids with ancestors
     std::vector<unsigned char *> ancestors; // array of the ids of the ancestors a block has.
-    unsigned char nonce[64];                // for nonce space, this should be equal to the size of the domain of the hash function
+    unsigned char merkel_root[64];
     uint32_t difficulty;                    // proposed difficulty, verified by consensus
     uint64_t timestamp;                     // in seconds because the speed of light is 3e8ms-1
-    unsigned char merkel_root[64];
+    uint64_t nonce;                // for nonce space, this can be relatively small as difficulty will be low
 
     void create_block_id(unsigned char *id)
     {
         std::unique_ptr<rocksdb::DB> db = open_db(std::string("headers"));
+        std::vector<std::string> ancestor_ids = fn_map(&uchar_to_string, &ancestors);
+        std::vector<std::string> ancestor_data = db_multiget(db.get(), ancestor_ids);
 
-        std::vector<std::string> ancestor_headers;
         std::vector<unsigned char> concat;
+        concat.push_back((unsigned char)((version >> 24) & 0xFF));
+        concat.push_back((unsigned char)((version >> 16) & 0xFF));
+        concat.push_back((unsigned char)((version >> 8) & 0xFF));
+        concat.push_back((unsigned char)((version >> 0) & 0xFF));
+
+        for(auto i: ancestors){
+            for(int j = 0; j < 64; j++){
+                concat.push_back(i[j]);
+            }
+        }
+
+        for(int i = 0; i < 64; i++){
+            concat.push_back(merkel_root[i]);
+        }
+
+        concat.push_back((unsigned char)((difficulty >> 24) & 0xFF));
+        concat.push_back((unsigned char)((difficulty >> 16) & 0xFF));
+        concat.push_back((unsigned char)((difficulty >> 8) & 0xFF));
+        concat.push_back((unsigned char)((difficulty >> 0) & 0xFF));
+
+        for(auto i: ancestor_data){
+            for(int j = 0; j < i.size(); j++){
+                concat.push_back((unsigned char)i[j]);
+            }
+        }
+        
+        concat.push_back((unsigned char)((timestamp >> 56) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 48) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 40) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 32) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 24) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 16) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 8) & 0xFF));
+        concat.push_back((unsigned char)((timestamp >> 0) & 0xFF));
+
+        concat.push_back((unsigned char)((nonce >> 56) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 48) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 40) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 32) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 24) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 16) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 8) & 0xFF));
+        concat.push_back((unsigned char)((nonce >> 0) & 0xFF));
+        
     }
 };
 

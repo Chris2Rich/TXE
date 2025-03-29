@@ -30,7 +30,7 @@ if (ROCKSDB_LIB AND ROCKSDB_INCLUDE_DIR)
     target_include_directories(TXE PRIVATE ${ROCKSDB_INCLUDE_DIR})
     target_link_libraries(TXE PRIVATE ${ROCKSDB_LIB})
 else()
-    message(FATAL_ERROR "RocksDB not found! Make sure it's installed.")
+    message(FATAL_ERROR "RocksDB not found! Ensure RocksDB is installed.")
 endif()
 
 # Add compiler options for GCC and Clang

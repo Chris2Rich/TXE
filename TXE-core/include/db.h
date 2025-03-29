@@ -24,7 +24,7 @@ std::unique_ptr<rocksdb::DB> open_db(std::string location)
         throw_db_error(status);
     }
 
-    return std::unique_ptr<rocksdb::DB>(db);
+    return std::make_unique<rocksdb::DB>(db);
 }
 
 // Add to database
