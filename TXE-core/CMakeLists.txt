@@ -22,6 +22,17 @@ target_include_directories(TXE PUBLIC
 find_package(OpenSSL REQUIRED)
 target_link_libraries(TXE PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
+# Find and link RocksDB
+find_library(ROCKSDB_LIB rocksdb)
+find_path(ROCKSDB_INCLUDE_DIR rocksdb/db.h)
+
+if (ROCKSDB_LIB AND ROCKSDB_INCLUDE_DIR)
+    target_include_directories(TXE PRIVATE ${ROCKSDB_INCLUDE_DIR})
+    target_link_libraries(TXE PRIVATE ${ROCKSDB_LIB})
+else()
+    message(FATAL_ERROR "RocksDB not found! Make sure it's installed.")
+endif()
+
 # Add compiler options for GCC and Clang
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(TXE PRIVATE

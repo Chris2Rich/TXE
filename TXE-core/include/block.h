@@ -4,15 +4,18 @@
 #include <stdint.h>
 #include "/workspaces/ecc/TXE-core/include/tx.h"
 #include "/workspaces/ecc/TXE-core/include/sha512.h"
+#include "/workspaces/ecc/TXE-core/include/db.h"
+#include <rocksdb/db.h>
 #include <math.h>
 #include <cstring>
+#include <string>
 #include <vector>
 
 struct header
 {
     unsigned int version;                   // if version changes, this allows for backwards compatability
-    unsigned char id[64];                   // hash of header's data + concatenation of ancestors' headers - allows for unique ids with ancestors
-    std::vector<unsigned char *> ancestors; // concatenation of the ids of the ancestors a block has.
+    unsigned char id[64];                   // hash of header's data (excluding id field) + concatenation of ancestors' headers - allows for unique ids with ancestors
+    std::vector<unsigned char *> ancestors; // array of the ids of the ancestors a block has.
     unsigned char nonce[64];                // for nonce space, this should be equal to the size of the domain of the hash function
     uint32_t difficulty;                    // proposed difficulty, verified by consensus
     uint64_t timestamp;                     // in seconds because the speed of light is 3e8ms-1
@@ -20,13 +23,16 @@ struct header
 
     void create_block_id(unsigned char *id)
     {
+        std::unique_ptr<rocksdb::DB> db = open_db(std::string("headers"));
+
+        std::vector<std::string> ancestor_headers;
         std::vector<unsigned char> concat;
     }
 };
 
 struct block
 {
-    unsigned char id[64];                               // stored in db and ID is used for rapid indexing into b-tree
+    unsigned char id[64];                               // stored in block db and associated with a header
     std::vector<std::vector<unsigned char>> merkletree; // first level  in [0], 2nd level in [1,2] 3rd level in [3,4,5,6] etc
     std::vector<tx> tx_list;
 

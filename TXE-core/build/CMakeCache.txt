@@ -195,6 +195,12 @@ OPENSSL_SSL_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libssl.so
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
 
+//Path to a file.
+ROCKSDB_INCLUDE_DIR:PATH=/usr/include
+
+//Path to a library.
+ROCKSDB_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/librocksdb.so
+
 //Value Computed by CMake
 TXE_BINARY_DIR:STATIC=/workspaces/ecc/TXE-core/build
 
