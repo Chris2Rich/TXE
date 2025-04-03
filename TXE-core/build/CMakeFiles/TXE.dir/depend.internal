@@ -3,6 +3,8 @@
 
 CMakeFiles/TXE.dir/src/main.cpp.o
  /workspaces/ecc/TXE-core/include/block.h
+ /workspaces/ecc/TXE-core/include/db.h
  /workspaces/ecc/TXE-core/include/sha512.h
  /workspaces/ecc/TXE-core/include/tx.h
+ /workspaces/ecc/TXE-core/include/util.h
  /workspaces/ecc/TXE-core/src/main.cpp

@@ -30,7 +30,7 @@ std::unique_ptr<rocksdb::DB> open_db(std::string location)
 // Add to database
 inline void db_add(rocksdb::DB *db, std::string *key, std::string *value)
 {
-    rocksdb::Status status = db->Put(rocksdb::WriteOptions(), &key, &value);
+    rocksdb::Status status = db->Put(rocksdb::WriteOptions(), rocksdb::Slice(key), rocksdb::Slice(value));
     if (!status.ok())
     {
         throw_db_error(status);
@@ -41,7 +41,7 @@ inline void db_add(rocksdb::DB *db, std::string *key, std::string *value)
 // Remove from database
 inline void db_remove(rocksdb::DB *db, std::string *key)
 {
-    rocksdb::Status status = db->Delete(rocksdb::WriteOptions(), &key);
+    rocksdb::Status status = db->Delete(rocksdb::WriteOptions(), rocksdb::Slice(key));
     if (!status.ok())
     {
         throw_db_error(status);
@@ -52,7 +52,7 @@ inline void db_remove(rocksdb::DB *db, std::string *key)
 inline std::string db_get(rocksdb::DB *db, std::string *key)
 {
     std::string value;
-    rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
+    rocksdb::Status status = db->Get(rocksdb::ReadOptions(), rocksdb::Slice(key));
     if (!status.ok())
     {
         if (status.IsNotFound())

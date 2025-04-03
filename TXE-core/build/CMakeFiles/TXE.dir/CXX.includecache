@@ -13,11 +13,33 @@ stdint.h
 -
 /workspaces/ecc/TXE-core/include/sha512.h
 -
+/workspaces/ecc/TXE-core/include/db.h
+-
+/workspaces/ecc/TXE-core/include/util.h
+-
+rocksdb/db.h
+-
 math.h
 -
 cstring
 -
+string
+-
 vector
+-
+gmp.h
+-
+
+/workspaces/ecc/TXE-core/include/db.h
+stdexcept
+-
+rocksdb/db.h
+-
+string
+-
+vector
+-
+memory
 -
 
 /workspaces/ecc/TXE-core/include/sha512.h
@@ -40,6 +62,12 @@ cstring
 vector
 -
 
+/workspaces/ecc/TXE-core/include/util.h
+vector
+-
+string
+-
+
 /workspaces/ecc/TXE-core/src/main.cpp
 /workspaces/ecc/TXE-core/include/tx.h
 -
@@ -50,7 +78,5 @@ vector
 iostream
 -
 iomanip
--
-rocksdb/db.h
 -
 
