@@ -92,7 +92,7 @@ struct header
             if(mpz_cmp(d,h)){
                 char* temp;
                 mpz_get_str(temp, 16, h);
-                id = (unsigned char*)temp;
+                *id = *(unsigned char*)temp;
                 return;
             }
 
