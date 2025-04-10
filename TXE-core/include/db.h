@@ -7,13 +7,13 @@
 #include <vector>
 #include <memory>
 
-void throw_db_error(rocksdb::Status status)
+inline void throw_db_error(rocksdb::Status status)
 {
     throw std::runtime_error(status.ToString());
 }
 
 // Open database and return unique_ptr
-std::unique_ptr<rocksdb::DB> open_db(const std::string& location)
+inline std::unique_ptr<rocksdb::DB> open_db(const std::string& location)
 {
     rocksdb::DB* db;
     rocksdb::Options options;
