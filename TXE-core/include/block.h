@@ -2,10 +2,6 @@
 
 #define _BLOCK_H
 #include <stdint.h>
-#include "/workspaces/ecc/TXE-core/include/tx.h"
-#include "/workspaces/ecc/TXE-core/include/sha512.h"
-#include "/workspaces/ecc/TXE-core/include/db.h"
-#include "/workspaces/ecc/TXE-core/include/util.h"
 #include <rocksdb/db.h>
 #include <math.h>
 #include <cstring>
@@ -13,6 +9,11 @@
 #include <vector>
 #include <gmp.h>
 #include <time.h>
+
+#include "tx.h"
+#include "sha512.h"
+#include "db.h"
+#include "util.h"
 
 struct header
 {

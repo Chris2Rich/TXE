@@ -1,7 +1,8 @@
-#include "/workspaces/ecc/TXE-core/include/tx.h"
-#include "/workspaces/ecc/TXE-core/include/block.h"
-#include "/workspaces/ecc/TXE-core/include/util.h"
 #include <iostream>
+
+#include "tx.h"
+#include "block.h"
+#include "util.h"
 
 int main()
 {

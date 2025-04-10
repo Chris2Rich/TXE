@@ -5,8 +5,9 @@
 #include <stdint.h>
 #include <math.h>
 #include <cstring>
-#include "/workspaces/ecc/TXE-core/include/sha512.h"
 #include <vector>
+
+#include "sha512.h"
 
 struct tx_in
 {

@@ -6,17 +6,17 @@
 
 #IncludeRegexTransform: 
 
-/workspaces/ecc/TXE-core/include/block.h
+../include/block.h
 stdint.h
 -
-/workspaces/ecc/TXE-core/include/tx.h
--
-/workspaces/ecc/TXE-core/include/sha512.h
--
-/workspaces/ecc/TXE-core/include/db.h
--
-/workspaces/ecc/TXE-core/include/util.h
--
+tx.h
+../include/tx.h
+sha512.h
+../include/sha512.h
+db.h
+../include/db.h
+util.h
+../include/util.h
 rocksdb/db.h
 -
 math.h
@@ -32,7 +32,7 @@ gmp.h
 time.h
 -
 
-/workspaces/ecc/TXE-core/include/db.h
+../include/db.h
 stdexcept
 -
 rocksdb/db.h
@@ -44,7 +44,7 @@ vector
 memory
 -
 
-/workspaces/ecc/TXE-core/include/sha512.h
+../include/sha512.h
 openssl/sha.h
 -
 vector
@@ -52,19 +52,19 @@ vector
 iostream
 -
 
-/workspaces/ecc/TXE-core/include/tx.h
+../include/tx.h
 stdint.h
 -
 math.h
 -
 cstring
 -
-/workspaces/ecc/TXE-core/include/sha512.h
--
+sha512.h
+../include/sha512.h
 vector
 -
 
-/workspaces/ecc/TXE-core/include/util.h
+../include/util.h
 vector
 -
 string
@@ -73,12 +73,12 @@ iomanip
 -
 
 /workspaces/ecc/TXE-core/src/main.cpp
-/workspaces/ecc/TXE-core/include/tx.h
--
-/workspaces/ecc/TXE-core/include/block.h
--
-/workspaces/ecc/TXE-core/include/util.h
--
+tx.h
+/workspaces/ecc/TXE-core/src/tx.h
+block.h
+/workspaces/ecc/TXE-core/src/block.h
+util.h
+/workspaces/ecc/TXE-core/src/util.h
 iostream
 -
 
