@@ -82,6 +82,7 @@ TXE: CMakeFiles/TXE.dir/build.make
 TXE: /usr/lib/x86_64-linux-gnu/libssl.so
 TXE: /usr/lib/x86_64-linux-gnu/libcrypto.so
 TXE: /usr/lib/x86_64-linux-gnu/librocksdb.so
+TXE: /usr/lib/x86_64-linux-gnu/libgmp.so
 TXE: CMakeFiles/TXE.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/workspaces/ecc/TXE-core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable TXE"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/TXE.dir/link.txt --verbose=$(VERBOSE)

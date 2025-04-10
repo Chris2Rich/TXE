@@ -12,27 +12,28 @@
 #include <string>
 #include <vector>
 #include <gmp.h>
+#include <time.h>
 
 struct header
 {
     unsigned int version;                   // if version changes, this allows for backwards compatability
     unsigned char id[64];                   // hash of header's data (excluding id field) + ancestors' headers - allows for unique ids with ancestors
-    std::vector<unsigned char *> ancestors; // array of the ids of the ancestors a block has.
     unsigned char merkel_root[64];
-    uint64_t difficulty_target; // proposed difficulty, verified by consensus
+    unsigned char difficulty_target[64] = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // proposed difficulty, verified by consensus
+    std::vector<unsigned char *> ancestors; // array of the ids of the ancestors a block has.
     uint64_t timestamp;  // in seconds because the speed of light is 3e8ms-1
     uint64_t nonce;      // for nonce space, this can be relatively small as difficulty will be low
 
     void create_block_id(unsigned char *id)
     {
         std::unique_ptr<rocksdb::DB> db = open_db(std::string("headers"));
-        std::vector<std::string> ancestor_ids = fn_map(&uchar_to_string, &ancestors);
+        std::vector<std::string> ancestor_ids = fn_map(uchar_to_string, &ancestors);
         std::vector<std::string> ancestor_data = db_multiget(db.get(), ancestor_ids);
         
         nonce = 0;
         mpz_t h, d;
         mpz_init2(h, 512);
-        mpz_init_set_ui(d, difficulty_target);
+        mpz_init_set_str(d, uchar_to_string(difficulty_target).c_str(), 16);
 
         while (true)
         {
@@ -56,10 +57,9 @@ struct header
                 concat.push_back(merkel_root[i]);
             }
 
-            concat.push_back((unsigned char)((difficulty_target >> 24) & 0xFF));
-            concat.push_back((unsigned char)((difficulty_target >> 16) & 0xFF));
-            concat.push_back((unsigned char)((difficulty_target >> 8) & 0xFF));
-            concat.push_back((unsigned char)((difficulty_target >> 0) & 0xFF));
+            for(int i = 0; i < 64; i++){
+                concat.push_back(difficulty_target[i]);
+            }
 
             for (auto i : ancestor_data)
             {
@@ -97,6 +97,7 @@ struct header
             }
 
             nonce++;
+            timestamp = time(NULL);
 
         }
     }

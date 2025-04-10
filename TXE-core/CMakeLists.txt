@@ -33,6 +33,17 @@ else()
     message(FATAL_ERROR "RocksDB not found! Ensure RocksDB is installed.")
 endif()
 
+# Find and link GNU MP (GMP)
+find_library(GMP_LIB NAMES gmp libgmp)
+find_path(GMP_INCLUDE_DIR NAMES gmp.h)
+
+if(GMP_LIB AND GMP_INCLUDE_DIR)
+    target_include_directories(TXE PRIVATE ${GMP_INCLUDE_DIR})
+    target_link_libraries(TXE PRIVATE ${GMP_LIB})
+else()
+    message(FATAL_ERROR "GNU MP not found! Ensure GNU MP is installed.")
+endif()
+
 # Add compiler options for GCC and Clang
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(TXE PRIVATE
