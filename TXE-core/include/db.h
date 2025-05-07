@@ -5,7 +5,6 @@
 #include <rocksdb/db.h>
 #include <string>
 #include <vector>
-#include <memory>
 
 inline void throw_db_error(rocksdb::Status status)
 {
