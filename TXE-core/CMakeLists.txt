@@ -14,6 +14,7 @@ set(SOURCES
 add_executable(TXE ${SOURCES})
 
 # Add include directories
+# This makes headers like "tx.h" (in include/) and "core/block.h" (in include/core/) findable
 target_include_directories(TXE PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
