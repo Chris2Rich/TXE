@@ -1,5 +1,5 @@
 # TODO
-- finish implementing TCRS (with no trusted party)
+- implement CSLRS (more appropriate for purpose of e-cash)
 - implement transaction verification (range proofs + UXTO)
 - implement transaction builder (and mempool - db)
 - implement transaction validation
