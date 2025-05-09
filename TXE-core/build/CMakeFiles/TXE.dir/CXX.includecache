@@ -41,8 +41,6 @@ string
 -
 vector
 -
-memory
--
 
 ../include/sha512.h
 openssl/sha.h
@@ -60,6 +58,10 @@ math.h
 cstring
 -
 vector
+-
+stdexcept
+-
+relic/relic.h
 -
 sha512.h
 ../include/sha512.h

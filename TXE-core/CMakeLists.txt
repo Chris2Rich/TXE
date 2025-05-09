@@ -34,6 +34,17 @@ else()
     message(FATAL_ERROR "RocksDB not found! Ensure RocksDB is installed.")
 endif()
 
+# Find and link Relic
+find_library(RELIC_LIB relic)
+find_path(RELIC_INCLUDE_DIR relic/relic.h)
+
+if (RELIC_LIB AND RELIC_INCLUDE_DIR)
+    target_include_directories(TXE PRIVATE ${RELIC_INCLUDE_DIR})
+    target_link_libraries(TXE PRIVATE ${RELIC_LIB})
+else()
+    message(FATAL_ERROR "Relic library not found! Ensure Relic is installed.")
+endif()
+
 # Find and link GNU MP (GMP)
 find_library(GMP_LIB NAMES gmp libgmp)
 find_path(GMP_INCLUDE_DIR NAMES gmp.h)

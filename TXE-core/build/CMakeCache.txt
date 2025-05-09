@@ -205,6 +205,12 @@ OPENSSL_SSL_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libssl.so
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
 
 //Path to a file.
+RELIC_INCLUDE_DIR:PATH=/usr/local/include
+
+//Path to a library.
+RELIC_LIB:FILEPATH=/usr/local/lib/librelic.so
+
+//Path to a file.
 ROCKSDB_INCLUDE_DIR:PATH=/usr/include
 
 //Path to a library.

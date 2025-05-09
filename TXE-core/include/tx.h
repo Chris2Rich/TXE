@@ -433,8 +433,8 @@ inline bool verify_confidential_transaction_structure(
     }
 
     ec_t sum_inputs_C, sum_outputs_C;
-    ec_null(sum_inputs_C); ec_new(sum_inputs_C); ec_set_inf(sum_inputs_C); // Initialize to identity
-    ec_null(sum_outputs_C); ec_new(sum_outputs_C); ec_set_inf(sum_outputs_C); // Initialize to identity
+    ec_null(sum_inputs_C); ec_new(sum_inputs_C); ec_set_infty(sum_inputs_C); // Initialize to identity
+    ec_null(sum_outputs_C); ec_new(sum_outputs_C); ec_set_infty(sum_outputs_C); // Initialize to identity
 
     for (const auto& c_in : input_commitments) {
         ec_add(sum_inputs_C, sum_inputs_C, c_in.C);
@@ -449,7 +449,7 @@ inline bool verify_confidential_transaction_structure(
     ec_null(diff_C); ec_new(diff_C);
     ec_sub(diff_C, sum_inputs_C, sum_outputs_C);
 
-    bool balanced = ec_is_inf(diff_C);
+    bool balanced = ec_is_infty(diff_C);
 
     ec_free(sum_inputs_C);
     ec_free(sum_outputs_C);

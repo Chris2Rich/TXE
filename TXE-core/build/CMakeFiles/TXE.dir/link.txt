@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/TXE.dir/src/main.cpp.o  -o TXE  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so /usr/lib/x86_64-linux-gnu/librocksdb.so /usr/lib/x86_64-linux-gnu/libgmp.so 
+/usr/bin/c++     CMakeFiles/TXE.dir/src/main.cpp.o  -o TXE  -Wl,-rpath,/usr/local/lib: /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so /usr/lib/x86_64-linux-gnu/librocksdb.so /usr/local/lib/librelic.so /usr/lib/x86_64-linux-gnu/libgmp.so 
