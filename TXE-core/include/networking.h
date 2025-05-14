@@ -31,10 +31,11 @@
 // Assumed dependencies (need actual definitions)
 #include "block.h"
 #include "tx.h"
-#include "utils.h"
+#include "util.h"
 
 // --- Constants & Configuration ---
 
+#define HASH_SIZE 64
 #define DEFAULT_P2P_PORT 8333
 #define MAX_PEERS 125
 #define MAX_INBOUND_CONNECTIONS 117
@@ -456,7 +457,7 @@ typedef struct {
     uint32_t magic;
     char command[12];
     uint32_t length;
-    uint8_t checksum[4]; // Use first 4 bytes of sha256(sha256(payload))
+    uint8_t checksum[4]; // Use first 4 bytes
 } MessageHeader;
 
 // Helper to get command string from type
@@ -702,37 +703,6 @@ static inline void gossip_inventory(const InventoryVector* inv_vector, size_t co
 }
 
 // Broadcasts a full transaction to peers.
-// Simplified: Sends to all connected peers. Assumes tx is already serialized.
-static inline void broadcast_transaction(const Transaction* tx, const uint8_t* serialized_tx, size_t tx_len) {
-    if (!tx || !serialized_tx || tx_len == 0) return;
-    printf("Broadcasting transaction (size %zu)...\n", tx_len);
-    int broadcast_count = 0;
-    for (int i = 0; i < MAX_PEERS; ++i) {
-        if (g_peers[i] && g_peers[i]->status == PEER_CONNECTED) {
-            // Maybe filter based on peer relay preferences later
-            if (send_message(g_peers[i], MSG_TX, serialized_tx, tx_len)) {
-                broadcast_count++;
-            }
-        }
-    }
-    printf("Transaction broadcast to %d peers.\n", broadcast_count);
-}
-
-// Broadcasts a full block to peers.
-// Simplified: Sends to all connected peers. Assumes block is already serialized.
-static inline void broadcast_block(const Block* block, const uint8_t* serialized_block, size_t block_len) {
-    if (!block || !serialized_block || block_len == 0) return;
-    printf("Broadcasting block %llu (size %zu)...\n", block->header.block_number, block_len);
-    int broadcast_count = 0;
-    for (int i = 0; i < MAX_PEERS; ++i) {
-        if (g_peers[i] && g_peers[i]->status == PEER_CONNECTED) {
-            if (send_message(g_peers[i], MSG_BLOCK, serialized_block, block_len)) {
-                broadcast_count++;
-            }
-        }
-    }
-     printf("Block %llu broadcast to %d peers.\n", block->header.block_number, broadcast_count);
-}
 
 // Sends a GETDATA message to request specific objects from a peer.
 // Simplified: Assumes inv_vector can be sent directly as payload (incorrect).
@@ -806,7 +776,7 @@ static inline void handle_getdata_message(Peer* peer, const uint8_t* payload, si
             // }
         } else if (inv->type == INV_TX) {
             printf("  Looking up transaction... (Placeholder)\n");
-            // Transaction* tx = find_tx_by_hash(inv->hash); // Assumed function
+            // TX* tx = find_tx_by_hash(inv->hash); // Assumed function
             // if (tx) {
             //    uint8_t* serialized_tx;
             //    size_t tx_len = serialize_transaction(tx, &serialized_tx);
@@ -826,7 +796,7 @@ static inline void handle_tx_message(Peer* peer, const uint8_t* payload, size_t 
     if (!peer || !payload || payload_len == 0) return;
     printf("Handling TX message (payload %zu bytes) from peer %s:%u...\n", payload_len, peer->ip_address, peer->port);
     // In real implementation: Deserialize transaction, validate, add to mempool, maybe relay.
-    // Transaction tx;
+    // TX tx;
     // if (deserialize_transaction(payload, payload_len, &tx)) {
     //    if (validate_transaction(&tx) && add_to_mempool(&tx)) {
     //        InventoryVector inv = {.type = INV_TX };
