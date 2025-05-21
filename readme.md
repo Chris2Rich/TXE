@@ -1,10 +1,7 @@
 # TODO
-- implement CSLRS (more appropriate for purpose of e-cash)
-- implement transaction verification (range proofs + UXTO)
-- implement transaction builder (and mempool - db)
-- implement transaction validation
-- implement block verification 
+- implement ringCT
+- implement randomx
+- implement db access
 - add p2p data transfer (i2p)
-- add peer discovery (nodes connect to hardcoded seeds who themselves will record ip of every node)
-- create gossip protocol for TX propagation (nodes randomly tell connected nodes part of mempool/new blocks)
+- implement transaction builder (and mempool - db)
 - create CLI transaction builder
