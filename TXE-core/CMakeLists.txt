@@ -5,6 +5,61 @@ project(TXE LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# ==================== RingCT Library ====================
+# Build the extracted Monero RingCT code into a static library
+# Point these to where you placed the Monero folders: common/, crypto/, crypto-ops.c/h, ringct/, and optional boost/
+set(RINGCT_ROOT ${PROJECT_SOURCE_DIR}/ringct)
+set(CRYPTO_ROOT ${PROJECT_SOURCE_DIR}/crypto)
+set(COMMON_ROOT ${PROJECT_SOURCE_DIR}/common)
+set(BOOST_ROOT ${PROJECT_SOURCE_DIR}/boost)  # remove or adjust if using system Boost
+
+# Include directories for ringct lib
+include_directories(
+    ${COMMON_ROOT}
+    ${CRYPTO_ROOT}
+    ${RINGCT_ROOT}
+    ${BOOST_ROOT}   # optional
+)
+
+# Gather RingCT sources
+file(GLOB_RECURSE RINGCT_COMMON_SOURCES
+    ${COMMON_ROOT}/*.cpp
+    ${COMMON_ROOT}/*.c
+)
+file(GLOB_RECURSE RINGCT_CRYPTO_SOURCES
+    ${CRYPTO_ROOT}/*.cpp
+    ${CRYPTO_ROOT}/*.c
+)
+file(GLOB_RECURSE RINGCT_CT_SOURCES
+    ${RINGCT_ROOT}/*.cpp
+    ${RINGCT_ROOT}/*.c
+)
+
+add_library(ringct STATIC
+    ${RINGCT_COMMON_SOURCES}
+    ${RINGCT_CRYPTO_SOURCES}
+    ${RINGCT_CT_SOURCES}
+)
+
+target_include_directories(ringct PUBLIC
+    $<BUILD_INTERFACE:${COMMON_ROOT}>
+    $<BUILD_INTERFACE:${CRYPTO_ROOT}>
+    $<BUILD_INTERFACE:${RINGCT_ROOT}>
+)
+
+# Link pthreads for threading/random utilities
+find_package(Threads REQUIRED)
+target_link_libraries(ringct PRIVATE Threads::Threads)
+
+# Optionally link system Boost
+find_package(Boost 1.65 REQUIRED COMPONENTS system)
+if(Boost_FOUND)
+    target_include_directories(ringct PUBLIC ${Boost_INCLUDE_DIRS})
+    target_link_libraries(ringct PUBLIC ${Boost_LIBRARIES})
+endif()
+
 # Explicitly list source files
 set(SOURCES
     src/main.cpp
@@ -32,17 +87,6 @@ if (ROCKSDB_LIB AND ROCKSDB_INCLUDE_DIR)
     target_link_libraries(TXE PRIVATE ${ROCKSDB_LIB})
 else()
     message(FATAL_ERROR "RocksDB not found! Ensure RocksDB is installed.")
-endif()
-
-# Find and link Relic
-find_library(RELIC_LIB relic)
-find_path(RELIC_INCLUDE_DIR relic/relic.h)
-
-if (RELIC_LIB AND RELIC_INCLUDE_DIR)
-    target_include_directories(TXE PRIVATE ${RELIC_INCLUDE_DIR})
-    target_link_libraries(TXE PRIVATE ${RELIC_LIB})
-else()
-    message(FATAL_ERROR "Relic library not found! Ensure Relic is installed.")
 endif()
 
 # Find and link GNU MP (GMP)

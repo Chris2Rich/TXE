@@ -2,10 +2,6 @@
     path = rocksdb
     url = https://github.com/facebook/rocksdb.git
 
-[submodule "relic"]
-    path = relic
-    url = https://github.com/relic-toolkit/relic.git
-
 [submodule "i2p"]
     path = i2p
     url = https://github.com/PurpleI2P/i2pd

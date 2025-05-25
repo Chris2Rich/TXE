@@ -5,14 +5,8 @@
 #include <math.h>
 #include <cstring>
 #include <vector>
-#include <stdexcept> // For exceptions
-
-// RELIC library
-extern "C" {
-#include <relic/relic.h>
-}
-
-#include "sha512.h" // Assuming your sha512.h is available
+#include <stdexcept>
+#include "sha512.h"
 
 // --- Global Pedersen Commitment Generators (Initialize these once in your application) ---
 // In a real application, these should be initialized securely and be standard.
