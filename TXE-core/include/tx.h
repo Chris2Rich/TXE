@@ -7,6 +7,7 @@
 #include <vector>
 #include <stdexcept>
 #include "sha512.h"
+#include <rctSigs.h>
 
 // --- Global Pedersen Commitment Generators (Initialize these once in your application) ---
 // In a real application, these should be initialized securely and be standard.

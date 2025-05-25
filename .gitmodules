@@ -5,6 +5,3 @@
 [submodule "i2p"]
     path = i2p
     url = https://github.com/PurpleI2P/i2pd
-[submodule "monero"]
-	path = monero
-	url = https://github.com/monero-project/monero

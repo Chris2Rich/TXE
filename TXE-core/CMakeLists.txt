@@ -4,79 +4,73 @@ project(TXE LANGUAGES CXX)
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-# ==================== RingCT Library ====================
-# Build the extracted Monero RingCT code into a static library
-# Point these to where you placed the Monero folders: common/, crypto/, crypto-ops.c/h, ringct/, and optional boost/
-set(RINGCT_ROOT ${PROJECT_SOURCE_DIR}/ringct)
-set(CRYPTO_ROOT ${PROJECT_SOURCE_DIR}/crypto)
-set(COMMON_ROOT ${PROJECT_SOURCE_DIR}/common)
-set(BOOST_ROOT ${PROJECT_SOURCE_DIR}/boost)  # remove or adjust if using system Boost
-
-# Include directories for ringct lib
-include_directories(
-    ${COMMON_ROOT}
-    ${CRYPTO_ROOT}
-    ${RINGCT_ROOT}
-    ${BOOST_ROOT}   # optional
-)
-
-# Gather RingCT sources
-file(GLOB_RECURSE RINGCT_COMMON_SOURCES
-    ${COMMON_ROOT}/*.cpp
-    ${COMMON_ROOT}/*.c
-)
-file(GLOB_RECURSE RINGCT_CRYPTO_SOURCES
-    ${CRYPTO_ROOT}/*.cpp
-    ${CRYPTO_ROOT}/*.c
-)
-file(GLOB_RECURSE RINGCT_CT_SOURCES
-    ${RINGCT_ROOT}/*.cpp
-    ${RINGCT_ROOT}/*.c
-)
-
-add_library(ringct STATIC
-    ${RINGCT_COMMON_SOURCES}
-    ${RINGCT_CRYPTO_SOURCES}
-    ${RINGCT_CT_SOURCES}
-)
-
-target_include_directories(ringct PUBLIC
-    $<BUILD_INTERFACE:${COMMON_ROOT}>
-    $<BUILD_INTERFACE:${CRYPTO_ROOT}>
-    $<BUILD_INTERFACE:${RINGCT_ROOT}>
-)
-
-# Link pthreads for threading/random utilities
-find_package(Threads REQUIRED)
-target_link_libraries(ringct PRIVATE Threads::Threads)
-
-# Optionally link system Boost
-find_package(Boost 1.65 REQUIRED COMPONENTS system)
-if(Boost_FOUND)
-    target_include_directories(ringct PUBLIC ${Boost_INCLUDE_DIRS})
-    target_link_libraries(ringct PUBLIC ${Boost_LIBRARIES})
-endif()
 
 # Explicitly list source files
 set(SOURCES
     src/main.cpp
 )
 
+# === Build the ringct library ===
+set(XMR_RINGCT_ROOT ${PROJECT_SOURCE_DIR}/include/xmr-ringct)
+
+# Grab every .cpp, .cc and .c file
+file(GLOB_RECURSE RINGCT_SRCS
+  ${XMR_RINGCT_ROOT}/common/*.cpp
+  ${XMR_RINGCT_ROOT}/common/*.c
+  ${XMR_RINGCT_ROOT}/common/*.cc
+  ${XMR_RINGCT_ROOT}/crypto/*.cpp
+  ${XMR_RINGCT_ROOT}/crypto/*.c
+  ${XMR_RINGCT_ROOT}/crypto/*.cc
+  ${XMR_RINGCT_ROOT}/ringct/*.cpp
+  ${XMR_RINGCT_ROOT}/ringct/*.c
+  ${XMR_RINGCT_ROOT}/ringct/*.cc
+)
+add_library(ringct STATIC ${RINGCT_SRCS})
+
+target_include_directories(ringct PUBLIC
+  ${XMR_RINGCT_ROOT}
+  ${XMR_RINGCT_ROOT}/common
+  ${XMR_RINGCT_ROOT}/crypto
+  ${XMR_RINGCT_ROOT}/ringct
+)
+
+# === RINGCT DEPENDENCIES ===
+find_package(Threads REQUIRED)
+target_link_libraries(ringct PRIVATE Threads::Threads)
+
+find_package(Boost 1.65 REQUIRED COMPONENTS system)
+target_include_directories(ringct PUBLIC ${Boost_INCLUDE_DIRS})
+target_link_libraries(ringct PUBLIC ${Boost_LIBRARIES})
+
+file(GLOB_RECURSE EPEE_SOURCES
+  ${PROJECT_SOURCE_DIR}/src/epee/*.cpp
+)
+add_library(epee_static STATIC ${EPEE_SOURCES})
+target_include_directories(epee_static PUBLIC
+  ${PROJECT_SOURCE_DIR}/include/xmr-ringct/epee/include
+)
+target_link_libraries(ringct PUBLIC epee_static)
+
+# === MAIN ===
 # Create the executable
 add_executable(TXE ${SOURCES})
 
-# Add include directories
-# This makes headers like "tx.h" (in include/) and "core/block.h" (in include/core/) findable
 target_include_directories(TXE PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
+target_link_libraries(TXE PRIVATE ringct)
+
+# === MAIN DEPENDENCIES ===
 # Find and link OpenSSL
 find_package(OpenSSL REQUIRED)
 target_link_libraries(TXE PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+
+# Find and link boost
+find_package(Boost 1.65 REQUIRED)
+target_include_directories(TXE PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(TXE PUBLIC ${Boost_LIBRARIES})
 
 # Find and link RocksDB
 find_library(ROCKSDB_LIB rocksdb)

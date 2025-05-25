@@ -1,7 +1,0 @@
-/workspaces/TXE/ringct/build/CMakeFiles/install/strip.dir
-/workspaces/TXE/ringct/build/CMakeFiles/install/local.dir
-/workspaces/TXE/ringct/build/CMakeFiles/install.dir
-/workspaces/TXE/ringct/build/CMakeFiles/list_install_components.dir
-/workspaces/TXE/ringct/build/CMakeFiles/rebuild_cache.dir
-/workspaces/TXE/ringct/build/CMakeFiles/edit_cache.dir
-/workspaces/TXE/ringct/build/CMakeFiles/ringct.dir
