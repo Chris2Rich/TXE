@@ -7,52 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Explicitly list source files
-set(SOURCES
-    src/main.cpp
-)
+set(SOURCES)
 
-# === Build the ringct library ===
-set(XMR_RINGCT_ROOT ${PROJECT_SOURCE_DIR}/include/xmr-ringct)
-
-# Grab every .cpp, .cc and .c file
-file(GLOB_RECURSE RINGCT_SRCS
-  ${XMR_RINGCT_ROOT}/common/*.cpp
-  ${XMR_RINGCT_ROOT}/common/*.c
-  ${XMR_RINGCT_ROOT}/common/*.cc
-  ${XMR_RINGCT_ROOT}/crypto/*.cpp
-  ${XMR_RINGCT_ROOT}/crypto/*.c
-  ${XMR_RINGCT_ROOT}/crypto/*.cc
-  ${XMR_RINGCT_ROOT}/ringct/*.cpp
-  ${XMR_RINGCT_ROOT}/ringct/*.c
-  ${XMR_RINGCT_ROOT}/ringct/*.cc
-)
-add_library(ringct STATIC ${RINGCT_SRCS})
-
-target_include_directories(ringct PUBLIC
-  ${XMR_RINGCT_ROOT}
-  ${XMR_RINGCT_ROOT}/common
-  ${XMR_RINGCT_ROOT}/crypto
-  ${XMR_RINGCT_ROOT}/ringct
-)
-
-# === RINGCT DEPENDENCIES ===
-find_package(Threads REQUIRED)
-target_link_libraries(ringct PRIVATE Threads::Threads)
-
-find_package(Boost 1.65 REQUIRED COMPONENTS system)
-target_include_directories(ringct PUBLIC ${Boost_INCLUDE_DIRS})
-target_link_libraries(ringct PUBLIC ${Boost_LIBRARIES})
-
-file(GLOB_RECURSE EPEE_SOURCES
-  ${PROJECT_SOURCE_DIR}/src/epee/*.cpp
-)
-add_library(epee_static STATIC ${EPEE_SOURCES})
-target_include_directories(epee_static PUBLIC
-  ${PROJECT_SOURCE_DIR}/include/xmr-ringct/epee/include
-)
-target_link_libraries(ringct PUBLIC epee_static)
-
-# === MAIN ===
 # Create the executable
 add_executable(TXE ${SOURCES})
 
@@ -81,17 +37,6 @@ if (ROCKSDB_LIB AND ROCKSDB_INCLUDE_DIR)
     target_link_libraries(TXE PRIVATE ${ROCKSDB_LIB})
 else()
     message(FATAL_ERROR "RocksDB not found! Ensure RocksDB is installed.")
-endif()
-
-# Find and link GNU MP (GMP)
-find_library(GMP_LIB NAMES gmp libgmp)
-find_path(GMP_INCLUDE_DIR NAMES gmp.h)
-
-if(GMP_LIB AND GMP_INCLUDE_DIR)
-    target_include_directories(TXE PRIVATE ${GMP_INCLUDE_DIR})
-    target_link_libraries(TXE PRIVATE ${GMP_LIB})
-else()
-    message(FATAL_ERROR "GNU MP not found! Ensure GNU MP is installed.")
 endif()
 
 # Add compiler options for GCC and Clang

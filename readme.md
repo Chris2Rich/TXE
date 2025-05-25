@@ -1,7 +1,7 @@
 # TODO
-- implement ringCT
-- implement randomx
-- implement db access
-- add p2p data transfer (i2p)
-- implement transaction builder (and mempool - db)
-- create CLI transaction builder
+- implement key generation and storage and ringCT (use ringct from monero)
+- implement storage system for utxo, transactions, block
+- implement randomx + tip selection (pick 1/2 of tips when creating new block)
+- implement opcodes for transaction validation
+- implement wallet cli (transaction builder + balance calculator), implement mining daemon
+- add data transfer (TCP)
