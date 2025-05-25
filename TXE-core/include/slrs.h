@@ -1,1 +1,0 @@
-//https://eprint.iacr.org/2024/553.pdf
