@@ -1,9 +1,11 @@
 # DONE
+day 1
 - implement key generation and storage 
+- implement transaction builder
 # TODO
 
 day 2
-- implement transaction builder + ringCT
+- implement transaction verifier
 - implement storage system for utxo, transactions, block
 
 day 3
