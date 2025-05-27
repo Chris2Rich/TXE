@@ -1,3 +1,6 @@
+#ifndef __tx
+#define __tx
+
 #include <crypto/crypto.h>
 #include <ringct/rctOps.h>
 #include <ringct/rctTypes.h>
@@ -9,51 +12,6 @@
 #include <functional>
 
 namespace TXE {
-
-template<typename T>
-  void append_pod(std::string &buf, const T &v) {
-    const char *p = reinterpret_cast<const char*>(&v);
-    buf.append(p, p + sizeof(T));
-  }
-
-  void append_varint(std::string &buf, uint64_t x) {
-    while (x >= 0x80) {
-      buf.push_back(char((x & 0x7f) | 0x80));
-      x >>= 7;
-    }
-    buf.push_back(char(x));
-  }
-
-  void serialize_prefix(const tx &t, std::string &buf) {
-    append_pod(buf, t.version);
-    append_varint(buf, t.vin.size());
-    for (auto const &in : t.vin) {
-      buf.append(reinterpret_cast<const char*>(in.image.data), 32);
-      append_varint(buf, in.key_offsets.size());
-      for (auto off : in.key_offsets)
-        append_varint(buf, off);
-    }
-
-    append_varint(buf, t.vout.size());
-    for (auto const &out : t.vout) {
-      buf.append(reinterpret_cast<const char*>(out.ephemeral_pub_key.data), 32);
-      buf.append(reinterpret_cast<const char*>(out.commitment.bytes), 32);
-    }
-
-    append_varint(buf, t.extra.size());
-    buf.append(reinterpret_cast<const char*>(t.extra.data()), t.extra.size());
-    append_pod(buf, t.fee);
-  }
-
-  rct::key get_prefix_hash(const tx &t) {
-    std::string blob;
-    serialize_prefix(t, blob);
-    crypto::hash h;
-    crypto::cn_fast_hash(blob.data(), blob.size(), h);
-    rct::key k;
-    std::memcpy(k.bytes, h.data, sizeof(h.data));
-    return k;
-  }
 
 struct tx_output {
     crypto::public_key ephemeral_pub_key;
@@ -108,6 +66,51 @@ struct tx {
           ecdh_info(ecdh),
           pseudo_outs(pseudos),
           input_signatures(sigs) {}
+
+    template<typename T>
+      static void append_pod(std::string &buf, const T &v) {
+        const char *p = reinterpret_cast<const char*>(&v);
+        buf.append(p, p + sizeof(T));
+      }
+
+      static void append_varint(std::string &buf, uint64_t x) {
+        while (x >= 0x80) {
+          buf.push_back(char((x & 0x7f) | 0x80));
+          x >>= 7;
+        }
+        buf.push_back(char(x));
+      }
+
+      static void serialize_prefix(const tx &t, std::string &buf) {
+        append_pod(buf, t.version);
+        append_varint(buf, t.vin.size());
+        for (auto const &in : t.vin) {
+          buf.append(reinterpret_cast<const char*>(in.image.data), 32);
+          append_varint(buf, in.key_offsets.size());
+          for (auto off : in.key_offsets)
+            append_varint(buf, off);
+        }
+
+        append_varint(buf, t.vout.size());
+        for (auto const &out : t.vout) {
+          buf.append(reinterpret_cast<const char*>(out.ephemeral_pub_key.data), 32);
+          buf.append(reinterpret_cast<const char*>(out.commitment.bytes), 32);
+        }
+
+        append_varint(buf, t.extra.size());
+        buf.append(reinterpret_cast<const char*>(t.extra.data()), t.extra.size());
+        append_pod(buf, t.fee);
+      }
+
+      static rct::key get_prefix_hash(const tx &t) {
+        std::string blob;
+        serialize_prefix(t, blob);
+        crypto::hash h;
+        crypto::cn_fast_hash(blob.data(), blob.size(), h);
+        rct::key k;
+        std::memcpy(k.bytes, h.data, sizeof(h.data));
+        return k;
+      }
     
     rct::rctSig make(
         const rct::ctkeyV&        inSk,
@@ -144,9 +147,48 @@ struct tx {
         );
     }
 
-    bool ver(){
-        
-    }
+  bool ver(const rct::rctSig &rv, bool check_semantics, bool check_signature) {
+      if (check_semantics) {
+          if (rv.type != rct::RCTTypeFull) {
+              std::cout << "Unsupported rctSig type" << std::endl;
+              return false;
+          }
+
+          if (rv.outPk.size() != rv.p.rangeSigs.size() || rv.outPk.size() != rv.ecdhInfo.size()) {
+              std::cout << "Mismatched output fields" << std::endl;
+              return false;
+          }
+
+          // Parallel verification of bulletproofs
+          for (size_t i = 0; i < rv.outPk.size(); ++i) {
+              if (!rct::verRange(rv.outPk[i].mask, rv.p.rangeSigs[i])) {
+                  std::cout << "Invalid range proof at index " << i << std::endl;
+                  return false;
+              }
+          }
+      }
+
+      // Phase 2: Ring signature / key image check
+      if (check_signature) {
+          if (rv.p.MGs.size() != 1) {
+              std::cout << "Invalid number of MGs" << std::endl;
+              return false;
+          }
+
+          rct::key pre_mlsag_hash = get_prefix_hash(*this);
+          rct::key fee_commitment = rct::scalarmultH(rct::d2h(rv.txnFee));
+
+          if (!rct::verRctMG(rv.p.MGs[0], rv.mixRing, rv.outPk, fee_commitment, pre_mlsag_hash)) {
+              std::cout << "Ring signature verification failed" << std::endl;
+              return false;
+          }
+      }
+
+      // Phase 3: Key Image Reuse - check against database
+
+      return true;
+  }
 };
 
 }
+#endif

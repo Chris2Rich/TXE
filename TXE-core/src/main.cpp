@@ -1,5 +1,8 @@
 #include "wallet.cpp"
 #include "tx.cpp"
+#include "block.cpp"
+#include "db.cpp"
+
 #include <iostream>
 #include <string>
 

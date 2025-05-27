@@ -19,7 +19,6 @@ set(STATIC                 ON  CACHE BOOL "" FORCE)
 set(ARCH                   "native" CACHE STRING "" FORCE)
 
 # Don’t need the blockchain DB or P2P layers:
-set(USE_LMDB               OFF CACHE BOOL "" FORCE)
 set(ENABLE_SYSTEMD         OFF CACHE BOOL "" FORCE)
 set(USE_USB_HID            OFF CACHE BOOL "" FORCE)  # hidapi
 set(USE_DEVICE_TREZOR      OFF CACHE BOOL "" FORCE)
@@ -43,6 +42,8 @@ add_executable(TXE
   ${CMAKE_SOURCE_DIR}/TXE-core/src/main.cpp
   ${CMAKE_SOURCE_DIR}/TXE-core/src/wallet.cpp
   ${CMAKE_SOURCE_DIR}/TXE-core/src/tx.cpp
+  ${CMAKE_SOURCE_DIR}/TXE-core/src/block.cpp
+  ${CMAKE_SOURCE_DIR}/TXE-core/src/db.cpp
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ target_include_directories(TXE PRIVATE
   ${CMAKE_SOURCE_DIR}/monero/src
   ${CMAKE_SOURCE_DIR}/monero/contrib/epee/include
   ${CMAKE_SOURCE_DIR}/monero/external/easylogging++
+  ${CMAKE_SOURCE_DIR}/monero/external/db_drivers/liblmdb
 )
 
 # ─────────────────────────────────────────────────────────────────────────────

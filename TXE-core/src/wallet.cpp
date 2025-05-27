@@ -1,3 +1,6 @@
+#ifndef __wallet
+#define __wallet
+
 #include <crypto/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -135,3 +138,5 @@ public:
   }
 };
 }
+
+#endif
