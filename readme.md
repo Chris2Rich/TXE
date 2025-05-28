@@ -5,10 +5,9 @@ day 1
 
 day 2
 - implement transaction verifier
+- implement storage system for utxo, transactions, block
 
 # TODO
-
-- implement storage system for utxo, transactions, block
 
 day 3
 - implement randomx + tip selection (pick 1/2 of tips when creating new block)

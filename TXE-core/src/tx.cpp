@@ -13,6 +13,16 @@
 
 namespace TXE {
 
+struct tx_input {
+    uint64_t amount;
+    crypto::key_image image;
+    std::vector<uint64_t> key_offsets;
+
+    tx_input() : amount(0) {}
+    tx_input(const crypto::key_image& img, const std::vector<uint64_t>& offsets, uint64_t amt = 0)
+        : amount(amt), image(img), key_offsets(offsets) {}
+};
+
 struct tx_output {
     crypto::public_key ephemeral_pub_key;
     rct::key commitment;
@@ -25,16 +35,6 @@ struct tx_output {
               const rct::Bulletproof& rp,
               const std::string& opc = "")
         : ephemeral_pub_key(pk), commitment(comm), proof(rp), opcodes(opc) {}
-};
-
-struct tx_input {
-    uint64_t amount;
-    crypto::key_image image;
-    std::vector<uint64_t> key_offsets;
-
-    tx_input() : amount(0) {}
-    tx_input(const crypto::key_image& img, const std::vector<uint64_t>& offsets, uint64_t amt = 0)
-        : amount(amt), image(img), key_offsets(offsets) {}
 };
 
 struct tx {

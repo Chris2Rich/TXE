@@ -7,6 +7,8 @@
 #include <lmdb.h>
 #include <iostream>
 #include <cstring>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 namespace TXE {
 
@@ -14,6 +16,7 @@ struct SimpleLMDB{
     MDB_env* env;
 
     SimpleLMDB(const std::string& path) {
+        if (!mkdir(path, 0755)) throw std::runtime_error("Failed to make data directory");
         if (mdb_env_create(&env)) throw std::runtime_error("Failed to create env");
         if (mdb_env_set_maxdbs(env, 10)) throw std::runtime_error("Failed to set maxdbs");
         if (mdb_env_open(env, path.c_str(), 0, 0664)) throw std::runtime_error("Failed to open env");
