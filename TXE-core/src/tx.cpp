@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <cstdint>
 #include <functional>
+#include <tuple>
 
 namespace TXE {
 
@@ -67,6 +68,48 @@ struct tx {
           ecdh_info(ecdh),
           pseudo_outs(pseudos),
           input_signatures(sigs) {}
+
+    void getKeyFromBlockchain(rct::ctkey &a, size_t reference_index) {
+      std::string key = std::to_string(reference_index);
+      std::string blob = db.get("outputs", key);
+
+      if (blob.size() != 64)
+          throw std::runtime_error("Invalid output blob size");
+
+      std::memcpy(a.mask.bytes, blob.data(),         32);
+      std::memcpy(a.dest.bytes, blob.data() + 32,    32);
+  }
+
+  // helper to pick a random integer in [0, n)
+  static size_t rand_index(size_t n) {
+      static thread_local std::mt19937_64 gen{std::random_device{}()};
+      std::uniform_int_distribution<size_t> dist(0, n-1);
+      return dist(gen);
+  }
+
+  // Build the mix‐ring for genRct:
+  std::tuple<std::vector<rct::ctkeyV>, size_t>
+  populate_from_blockchain(const rct::ctkeyV& inPk, int mixin) {
+      size_t input_count = inPk.size();
+      size_t columns     = mixin + 1;
+
+      // initialize ring: each column starts as a copy of the real key vector
+      std::vector<rct::ctkeyV> mixRing(columns, inPk);
+
+      // pick which column will hold the real inputs
+      size_t real_index = rand_index(columns);
+
+      // fill every other column with decoys
+      for (size_t col = 0; col < columns; ++col) {
+          if (col == real_index) continue;
+          for (size_t row = 0; row < input_count; ++row) {
+              // replace with a chain‐derived key
+              getKeyFromBlockchain(mixRing[col][row], /* e.g. height or offset */ 0);
+          }
+      }
+
+      return std::make_tuple(mixRing, real_index);
+  }
 
     template<typename T>
       static void append_pod(std::string &buf, const T &v) {
@@ -186,7 +229,7 @@ struct tx {
         rct::key msg = get_prefix_hash(*this);
 
         // 2) Fetch mixRing + real index via your hook:
-        auto [mixRing, real_index] = tktkpopulate(inPk, mixin);
+        auto [mixRing, real_index] = populate_from_blockchain(inPk, mixin);
 
         // 3) Prepare output secret‐mask vector
         rct::ctkeyV outSk;
@@ -245,7 +288,27 @@ struct tx {
       }
 
       // Phase 3: Key Image Reuse - check against database
+      for (auto const &in : vin) {
+        // raw 32‑byte key_image blob
+        std::string ki_blob(reinterpret_cast<const char*>(in.image.data), 32);
 
+        try {
+            // if this succeeds, we have a reuse
+            db.get("key_images", ki_blob);
+            std::cout << "Key image reuse detected\n";
+            return false;
+        } catch (const std::runtime_error &e) {
+            // expected: key not found → safe to proceed
+            if (std::string(e.what()) != "Key not found")
+                throw;  // real DB error
+        }
+    }
+
+    // If we reach here, no reuse: now record them
+    for (auto const &in : vin) {
+        std::string ki_blob(reinterpret_cast<const char*>(in.image.data), 32);
+        db.put("key_images", ki_blob, "");
+    }
       return true;
   }
 

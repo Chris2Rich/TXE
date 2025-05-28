@@ -7,10 +7,8 @@
 #include <string>
 
 int main(int argc, char* argv[]){
+    TXE::SimpleLMDB DB("./lmdb_data");
     if (std::string(argv[1]) == "init") {
-        std::cout << "Initializing LMDB at ./lmdb_data..." << std::endl;
-        TXE::SimpleLMDB DB("./lmdb_data");
-
         MDB_txn* txn;
         if (mdb_txn_begin(DB.env, nullptr, 0, &txn))
             throw std::runtime_error("Failed to begin init transaction");
