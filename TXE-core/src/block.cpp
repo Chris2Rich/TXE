@@ -5,6 +5,7 @@
 #include <vector>
 #include <stdint.h>
 #include <string>
+#include <randomx.h>
 
 namespace TXE {
 
@@ -15,6 +16,7 @@ struct header {
 
     std::vector<crypto::hash> tip_ids; // Direct parents (tips)
     crypto::hash merkle_root; // Proof transactions haven't been changed
+    crypto::hash seed; // the randomx seed the block was mined with
 
     crypto::hash header_id;
 
@@ -33,8 +35,36 @@ struct header {
         }
 
         blob.append(reinterpret_cast<const char*>(merkle_root.data), sizeof(merkle_root.data));
+        blob.append(reinterpret_cast<const char*>(seed.data), sizeof(seed.data));
 
         return blob;
+    }
+
+    void calculate_header_id() {
+        // Get the header blob (without the header_id itself)
+        std::string blob = get_header_blob();
+        
+        // Initialize RandomX
+        randomx_flags flags = randomx_get_flags();
+        randomx_cache* cache = randomx_alloc_cache(flags);
+        
+        // Use the seed for RandomX
+        // seed will be generated from "super" hashes which are 1-500x lower than difficulty.
+        const char seed[] = "TXE_RandomX_Seed";
+        randomx_init_cache(cache, seed, sizeof(seed) - 1);
+        
+        randomx_vm* vm = randomx_create_vm(flags, cache, nullptr);
+        
+        // Calculate hash
+        char hash_output[RANDOMX_HASH_SIZE];
+        randomx_calculate_hash(vm, blob.data(), blob.size(), hash_output);
+        
+        // Copy the hash to header_id
+        std::memcpy(header_id.data, hash_output, sizeof(header_id.data));
+        
+        // Cleanup
+        randomx_destroy_vm(vm);
+        randomx_release_cache(cache);
     }
 
     std::string serialize() {
@@ -90,6 +120,11 @@ struct header {
         std::memcpy(h.merkle_root.data, blob.data() + offset, sizeof(h.merkle_root.data));
         offset += sizeof(h.merkle_root.data);
 
+        // Read seed
+        require(sizeof(h.seed.data));
+        std::memcpy(h.seed.data, blob.data() + offset, sizeof(h.seed.data));
+        offset += sizeof(h.seed.data);
+
         // Read header_id
         require(sizeof(h.header_id.data));
         std::memcpy(h.header_id.data, blob.data() + offset, sizeof(h.header_id.data));
@@ -105,12 +140,66 @@ struct block {
     tx miner_tx; // Coinbase / miner reward transaction
     std::vector<tx> txlist; // Normal transactions
 
+    crypto::hash create_merkle_root() {
+        std::vector<crypto::hash> tx_hashes;
+        
+        // Add miner transaction hash
+        std::string miner_blob = miner_tx.serialize_tx();
+        crypto::hash miner_hash;
+        crypto::cn_fast_hash(miner_blob.data(), miner_blob.size(), miner_hash);
+        tx_hashes.push_back(miner_hash);
+        
+        // Add all regular transaction hashes
+        for (const auto& transaction : txlist) {
+            std::string tx_blob = transaction.serialize_tx();
+            crypto::hash tx_hash;
+            crypto::cn_fast_hash(tx_blob.data(), tx_blob.size(), tx_hash);
+            tx_hashes.push_back(tx_hash);
+        }
+        
+        // Handle single transaction case
+        if (tx_hashes.size() == 1) {
+            return tx_hashes[0];
+        }
+        
+        // Build Merkle tree bottom-up
+        std::vector<crypto::hash> current_level = tx_hashes;
+        
+        while (current_level.size() > 1) {
+            std::vector<crypto::hash> next_level;
+            
+            // Process pairs of hashes
+            for (size_t i = 0; i < current_level.size(); i += 2) {
+                crypto::hash combined_hash;
+                
+                std::string combined;
+                combined.append(reinterpret_cast<const char*>(current_level[i].data), sizeof(current_level[i].data));
+                
+                if (i + 1 < current_level.size()) {
+                    // Hash pair of different hashes
+                    combined.append(reinterpret_cast<const char*>(current_level[i + 1].data), sizeof(current_level[i + 1].data));
+                } else {
+                    // Odd number of hashes - duplicate the last hash (Bitcoin standard)
+                    combined.append(reinterpret_cast<const char*>(current_level[i].data), sizeof(current_level[i].data));
+                }
+                
+                crypto::cn_fast_hash(combined.data(), combined.size(), combined_hash);
+                
+                next_level.push_back(combined_hash);
+            }
+            
+            current_level = std::move(next_level);
+        }
+        
+        return current_level[0];
+    }
+
     std::string serialize_block(const block b){
         std::string blob = hdr.serialize();
-        blob.append(reinterpret_cast<const char*>(&block_id.data), sizeof(block_id.data));
+        blob.append(reinterpret_cast<const char*>(block_id.data), sizeof(block_id.data));
     
         // miner_tx
-        std::string miner_blob = miner_tx.serialize();
+        std::string miner_blob = miner_tx.serialize_tx();
         // prefix length for miner tx
         uint64_t miner_len = miner_blob.size();
         blob.append(reinterpret_cast<const char*>(&miner_len), sizeof(miner_len));
@@ -120,7 +209,7 @@ struct block {
         uint64_t tx_count = txlist.size();
         blob.append(reinterpret_cast<const char*>(&tx_count), sizeof(tx_count));
         for (auto const &x : txlist) {
-            std::string tx_blob = x.serialize();
+            std::string tx_blob = x.serialize_tx();
             uint64_t len = tx_blob.size();
             blob.append(reinterpret_cast<const char*>(&len), sizeof(len));
             blob.append(tx_blob);
@@ -151,7 +240,7 @@ struct block {
         uint64_t miner_len;
         std::memcpy(&miner_len, blob.data() + offset, sizeof(miner_len)); offset += sizeof(miner_len);
         require(miner_len);
-        b.miner_tx = tx::deserialize(blob.substr(offset, miner_len));
+        b.miner_tx = tx::deserialize_tx(blob.substr(offset, miner_len));
         offset += miner_len;
 
         // 4) txlist
@@ -164,7 +253,7 @@ struct block {
             uint64_t len;
             std::memcpy(&len, blob.data() + offset, sizeof(len)); offset += sizeof(len);
             require(len);
-            b.txlist[i] = tx::deserialize(blob.substr(offset, len));
+            b.txlist[i] = tx::deserialize_tx(blob.substr(offset, len));
             offset += len;
         }
 

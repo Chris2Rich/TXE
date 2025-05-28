@@ -18,7 +18,7 @@ set(BUILD_TAG              ""  CACHE STRING "" FORCE)
 set(STATIC                 ON  CACHE BOOL "" FORCE)
 set(ARCH                   "native" CACHE STRING "" FORCE)
 
-# Don’t need the blockchain DB or P2P layers:
+# Don’t need the P2P layers:
 set(ENABLE_SYSTEMD         OFF CACHE BOOL "" FORCE)
 set(USE_USB_HID            OFF CACHE BOOL "" FORCE)  # hidapi
 set(USE_DEVICE_TREZOR      OFF CACHE BOOL "" FORCE)
@@ -54,12 +54,15 @@ target_include_directories(TXE PRIVATE
   ${CMAKE_SOURCE_DIR}/monero/contrib/epee/include
   ${CMAKE_SOURCE_DIR}/monero/external/easylogging++
   ${CMAKE_SOURCE_DIR}/monero/external/db_drivers/liblmdb
+  ${CMAKE_SOURCE_DIR}/monero/external/randomx/src
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6) LINK EXACT LIBRARIES NEEDED
 # ─────────────────────────────────────────────────────────────────────────────
 target_link_libraries(TXE PRIVATE
+  # Monero
+  randomx
   cryptonote_basic
   cryptonote_core
   crypto
@@ -68,7 +71,7 @@ target_link_libraries(TXE PRIVATE
   epee
   device
 
-  # plus your other deps:
+  # Other
   OpenSSL::Crypto
   Threads::Threads
   Boost::system
