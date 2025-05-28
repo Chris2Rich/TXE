@@ -109,12 +109,66 @@ struct block {
         std::string blob = hdr.serialize();
         blob.append(reinterpret_cast<const char*>(&block_id.data), sizeof(block_id.data));
     
+        // miner_tx
+        std::string miner_blob = miner_tx.serialize();
+        // prefix length for miner tx
+        uint64_t miner_len = miner_blob.size();
+        blob.append(reinterpret_cast<const char*>(&miner_len), sizeof(miner_len));
+        blob.append(miner_blob);
+
+        // txlist
         uint64_t tx_count = txlist.size();
         blob.append(reinterpret_cast<const char*>(&tx_count), sizeof(tx_count));
+        for (auto const &x : txlist) {
+            std::string tx_blob = x.serialize();
+            uint64_t len = tx_blob.size();
+            blob.append(reinterpret_cast<const char*>(&len), sizeof(len));
+            blob.append(tx_blob);
+        }
+
+        return blob;
     }
 
-    static block deserialize_block(const std::string b){
-        
+    static block deserialize_block(const std::string& blob) {
+        block b;
+        size_t offset = 0;
+
+        // 1) header
+        b.hdr = header::deserialize(blob);
+        size_t header_size = b.hdr.get_header_blob().size() + sizeof(b.hdr.header_id.data);
+        offset = header_size;
+
+        // 2) block_id
+        auto require = [&](size_t sz) {
+            if (offset + sz > blob.size()) throw std::runtime_error("Blob too small for block deserialization");
+        };
+        require(sizeof(b.block_id.data));
+        std::memcpy(b.block_id.data, blob.data() + offset, sizeof(b.block_id.data));
+        offset += sizeof(b.block_id.data);
+
+        // 3) miner_tx
+        require(sizeof(uint64_t));
+        uint64_t miner_len;
+        std::memcpy(&miner_len, blob.data() + offset, sizeof(miner_len)); offset += sizeof(miner_len);
+        require(miner_len);
+        b.miner_tx = tx::deserialize(blob.substr(offset, miner_len));
+        offset += miner_len;
+
+        // 4) txlist
+        require(sizeof(uint64_t));
+        uint64_t tx_count;
+        std::memcpy(&tx_count, blob.data() + offset, sizeof(tx_count)); offset += sizeof(tx_count);
+        b.txlist.resize(tx_count);
+        for (uint64_t i = 0; i < tx_count; ++i) {
+            require(sizeof(uint64_t));
+            uint64_t len;
+            std::memcpy(&len, blob.data() + offset, sizeof(len)); offset += sizeof(len);
+            require(len);
+            b.txlist[i] = tx::deserialize(blob.substr(offset, len));
+            offset += len;
+        }
+
+        return b;
     }
 };
 }
