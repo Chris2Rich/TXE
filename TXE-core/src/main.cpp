@@ -7,17 +7,17 @@
 #include <string>
 
 int main(int argc, char* argv[]){
-    TXE::SimpleLMDB DB("./lmdb_data");
     if (std::string(argv[1]) == "init") {
+        TXE::SimpleLMDB db("./lmdb_data");
         MDB_txn* txn;
         if (mdb_txn_begin(DB.env, nullptr, 0, &txn))
             throw std::runtime_error("Failed to begin init transaction");
 
-        DB.get_dbi("blocks", txn);
-        DB.get_dbi("key_images", txn);
-        DB.get_dbi("ring_members", txn);
-        DB.get_dbi("transactions", txn);
-        DB.get_dbi("outputs", txn);
+        db.get_dbi("blocks", txn);
+        db.get_dbi("key_images", txn);
+        db.get_dbi("ring_members", txn);
+        db.get_dbi("transactions", txn);
+        db.get_dbi("outputs", txn);
 
         if (mdb_txn_commit(txn))
             throw std::runtime_error("Failed to commit init transaction");

@@ -1,6 +1,7 @@
 #ifndef __tx
 #define __tx
 
+#include "db.cpp"
 #include <crypto/crypto.h>
 #include <ringct/rctOps.h>
 #include <ringct/rctTypes.h>
@@ -71,6 +72,7 @@ struct tx {
 
     void getKeyFromBlockchain(rct::ctkey &a, size_t reference_index) {
       std::string key = std::to_string(reference_index);
+      SimpleLMDB db("./lmdb_data");
       std::string blob = db.get("outputs", key);
 
       if (blob.size() != 64)
