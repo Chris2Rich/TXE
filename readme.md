@@ -9,10 +9,10 @@ day 2
 
 day 3
 - implement randomx
+- finish decoy selection
 
 # TODO
 
-- finish decoy selection
 - test hash
 - implement opcodes for transaction validation
 
