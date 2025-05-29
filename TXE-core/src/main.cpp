@@ -6,11 +6,13 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char* argv[]){
-    if (std::string(argv[1]) == "init") {
+int main(int argc, char *argv[])
+{
+    if (std::string(argv[1]) == "init")
+    {
         TXE::SimpleLMDB db("./lmdb_data");
-        MDB_txn* txn;
-        if (mdb_txn_begin(DB.env, nullptr, 0, &txn))
+        MDB_txn *txn;
+        if (mdb_txn_begin(db.env, nullptr, 0, &txn))
             throw std::runtime_error("Failed to begin init transaction");
 
         db.get_dbi("blocks", txn);
@@ -24,9 +26,11 @@ int main(int argc, char* argv[]){
 
         std::cout << "LMDB initialized with tables: blocks, key_images, ring_members, transactions, outputs" << std::endl;
     }
-    if(std::string(argv[1]) == "wallet"){
-        //wallet create "filepath"
-        if(std::string(argv[2]) == "create"){
+    if (std::string(argv[1]) == "wallet")
+    {
+        // wallet create "filepath"
+        if (std::string(argv[2]) == "create")
+        {
 
             std::string pass;
             std::cout << "Input Password: ";
