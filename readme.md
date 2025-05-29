@@ -13,6 +13,7 @@ day 3
 # TODO
 
 - finish decoy selection
+- test hash
 - implement opcodes for transaction validation
 
 day 4
