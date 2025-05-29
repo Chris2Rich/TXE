@@ -12,6 +12,7 @@ day 3
 
 # TODO
 
+- finish decoy selection
 - implement opcodes for transaction validation
 
 day 4
