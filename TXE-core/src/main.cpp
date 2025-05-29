@@ -17,9 +17,9 @@ int main(int argc, char *argv[])
 
         db.get_dbi("blocks", txn);
         db.get_dbi("key_images", txn);
-        db.get_dbi("ring_members", txn);
         db.get_dbi("transactions", txn);
         db.get_dbi("outputs", txn);
+        db.get_dbi("output_indexes", txn);
 
         if (mdb_txn_commit(txn))
             throw std::runtime_error("Failed to commit init transaction");
