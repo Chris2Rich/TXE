@@ -459,12 +459,6 @@ namespace TXE
 
         an_mixRing[i] = single_ring_for_input_i;
         indices[i] = static_cast<unsigned int>(real_idx_for_input_i);
-        for (size_t k = 0; k < single_ring_for_input_i.size(); ++k)
-        {
-          if (k != real_idx_for_input_i)
-          {
-          }
-        }
       }
       rct::ctkeyV outSk;
 
