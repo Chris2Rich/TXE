@@ -81,6 +81,7 @@ std::pair<rct::key, rct::key> create_mock_spendable_output_for_wallet(
     ctkey_blob.append(reinterpret_cast<const char *>(generated_ctkey.mask.bytes), 32); // Commitment C
     ctkey_blob.append(reinterpret_cast<const char *>(generated_ctkey.dest.bytes), 32); // Public Key P
     db.put("output_index", std::to_string(global_output_idx), ctkey_blob);
+    db.put("outputs", std::to_string(global_output_idx), "TEST");
 
     // Update global count (simplified)
     uint64_t current_count = 0;
@@ -126,10 +127,11 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
     // Create some dummy outputs to act as decoys (owned by someone else)
     rct::ctkey dummy_decoy_ctkey;
     TXE::WalletKeys dummy_owner = TXE::WalletKeys::generate();
-    create_mock_spendable_output_for_wallet(db, 2, dummy_owner, 500, dummy_decoy_ctkey);
-    create_mock_spendable_output_for_wallet(db, 3, dummy_owner, 800, dummy_decoy_ctkey);
-    create_mock_spendable_output_for_wallet(db, 4, dummy_owner, 1200, dummy_decoy_ctkey);
-    std::cout << "Created 3 additional outputs for potential decoys." << std::endl;
+    std::cout << "Creating decoy outputs..." << std::endl;
+    for (int i = 2; i < 17; i++) {
+        create_mock_spendable_output_for_wallet(db, i, dummy_owner, 500 + (i * 100), dummy_decoy_ctkey);
+    }
+    std::cout << "Created 15 additional outputs for decoys (total outputs in DB: ~17)." << std::endl;
 
     // --- TEST 1: Correct Transaction (1 input, 2 outputs) ---
     std::cout << "\n--- Test 1: Correct Transaction ---" << std::endl;
@@ -193,7 +195,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
         correct_tx.signature = correct_tx.make(
             correct_in_sk_vec, correct_in_pk_vec, destinations_for_make,
             correct_in_amounts_vec, out_amounts_for_make, amount_keys_for_make,
-            2 /*mixin*/, hwdev);
+            3 /*mixin*/, hwdev);
         // Populate vout and ecdhInfo from signature
         for (size_t i = 0; i < correct_tx.vout.size(); ++i)
         {
@@ -306,40 +308,46 @@ int test(int argc, char *argv[])
 {
     // Simplified main: just runs tests if no other command.
     // Or you can add a "test" command: if (std::string(argv[1]) == "test")
-    if (argc == 2 && std::string(argv[1]) == "runtests")
+    std::string db_path = "./lmdb_data";
+    std::filesystem::remove_all(db_path); // Clean previous test run
+    TXE::SimpleLMDB db(db_path);
+    hw::device &hwdev = hw::get_device("default");
+
+    // Create necessary DBIs
+    MDB_txn *setup_txn;
+    mdb_txn_begin(db.env, nullptr, 0, &setup_txn);
+    db.get_dbi("blocks", setup_txn);
+    db.get_dbi("tips", setup_txn);
+    db.get_dbi("key_images", setup_txn);
+    db.get_dbi("transactions", setup_txn);
+    db.get_dbi("output_index", setup_txn);
+    db.get_dbi("outputs", setup_txn);
+    mdb_txn_commit(setup_txn);
+
+    try
     {
-        std::string db_path = "./test_tx_db_data";
-        std::filesystem::remove_all(db_path); // Clean previous test run
-        TXE::SimpleLMDB db(db_path);
-        hw::device &hwdev = hw::get_device("default");
-
-        // Create necessary DBIs
-        MDB_txn *setup_txn;
-        mdb_txn_begin(db.env, nullptr, 0, &setup_txn);
-        db.get_dbi("blocks", setup_txn);
-        db.get_dbi("tips", setup_txn);
-        db.get_dbi("key_images", setup_txn);
-        db.get_dbi("transactions", setup_txn);
-        db.get_dbi("output_index", setup_txn);
-        db.get_dbi("outputs", setup_txn); // Ensure "outputs" is what populate_ring counts
-        db.get_dbi("metadata", setup_txn);
-        mdb_txn_commit(setup_txn);
-
-        try
-        {
-            test_transactions(db, hwdev);
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "EXCEPTION during tests: " << e.what() << std::endl;
-            return 1;
-        }
+        test_transactions(db, hwdev);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "EXCEPTION during tests: " << e.what() << std::endl;
+        return 1;
     }
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
+    if (argc < 2)
+    {
+        return 0;
+    }
+
+    if (std::string(argv[1]) == "runtests")
+    {
+        return test(argc, argv);
+    }
+
     if (std::string(argv[1]) == "init")
     {
         TXE::SimpleLMDB db("./lmdb_data");
@@ -358,6 +366,7 @@ int main(int argc, char *argv[])
             throw std::runtime_error("Failed to commit init transaction");
 
         std::cout << "LMDB initialized with tables: blocks, key_images, ring_members, transactions, outputs" << std::endl;
+        
     }
     if (std::string(argv[1]) == "wallet")
     {

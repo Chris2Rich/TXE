@@ -71,7 +71,7 @@ namespace TXE
           fee(tx_fee),
           ecdh_info(ecdh) {}
 
-    void getKeyFromBlockchain(rct::ctkey &a, size_t reference_index, SimpleLMDB db)
+    void getKeyFromBlockchain(rct::ctkey &a, size_t reference_index, SimpleLMDB &db)
     {
       std::string key = std::to_string(reference_index);
       std::string blob = db.get("output_index", key);
