@@ -16,6 +16,7 @@ namespace TXE
         uint64_t ver;       // Version (usually 1 or 2)
         uint64_t timestamp; // Unix timestamp
         uint64_t nonce;     // Nonce for RandomX
+        uint64_t target;
 
         std::vector<crypto::hash> tip_ids; // Direct parents (tips)
         crypto::hash merkle_root;          // Proof transactions haven't been changed
@@ -30,6 +31,7 @@ namespace TXE
             blob.append(reinterpret_cast<const char *>(&ver), sizeof(ver));
             blob.append(reinterpret_cast<const char *>(&timestamp), sizeof(timestamp));
             blob.append(reinterpret_cast<const char *>(&nonce), sizeof(nonce));
+            blob.append(reinterpret_cast<const char *>(&target), sizeof(target));
 
             uint64_t tip_count = tip_ids.size();
             blob.append(reinterpret_cast<const char *>(&tip_count), sizeof(tip_count));
@@ -106,6 +108,11 @@ namespace TXE
             std::memcpy(&h.nonce, blob.data() + offset, sizeof(h.nonce));
             offset += sizeof(h.nonce);
 
+            // Read difficulty
+            require(sizeof(h.target));
+            std::memcpy(&h.target, blob.data() + offset, sizeof(h.target));
+            offset += sizeof(h.target);
+
             // Read tip count
             uint64_t tip_count = 0;
             require(sizeof(tip_count));
@@ -147,7 +154,6 @@ namespace TXE
     struct block
     {
         header hdr;
-        crypto::hash block_id;
         tx miner_tx;            // Coinbase / miner reward transaction
         std::vector<tx> txlist; // Normal transactions
 
@@ -213,10 +219,9 @@ namespace TXE
             return current_level[0];
         }
 
-        std::string serialize_block(const block b)
+        std::string serialize_block()
         {
             std::string blob = hdr.serialize();
-            blob.append(reinterpret_cast<const char *>(block_id.data), sizeof(block_id.data));
 
             // miner_tx
             std::string miner_blob = miner_tx.serialize_tx();
@@ -249,15 +254,14 @@ namespace TXE
             size_t header_size = b.hdr.get_header_blob().size() + sizeof(b.hdr.header_id.data);
             offset = header_size;
 
+            std::cout << "deserialized header" << std::endl;
+
             // 2) block_id
             auto require = [&](size_t sz)
             {
                 if (offset + sz > blob.size())
                     throw std::runtime_error("Blob too small for block deserialization");
             };
-            require(sizeof(b.block_id.data));
-            std::memcpy(b.block_id.data, blob.data() + offset, sizeof(b.block_id.data));
-            offset += sizeof(b.block_id.data);
 
             // 3) miner_tx
             require(sizeof(uint64_t));
@@ -267,6 +271,8 @@ namespace TXE
             require(miner_len);
             b.miner_tx = tx::deserialize_tx(blob.substr(offset, miner_len));
             offset += miner_len;
+
+            std::cout << "deserialized miner tx" << std::endl;
 
             // 4) txlist
             require(sizeof(uint64_t));
@@ -284,6 +290,8 @@ namespace TXE
                 b.txlist[i] = tx::deserialize_tx(blob.substr(offset, len));
                 offset += len;
             }
+
+            std::cout << "deserialized " << tx_count << " tx" << std::endl;
 
             return b;
         }

@@ -338,6 +338,160 @@ int test(int argc, char *argv[])
     return 0;
 }
 
+TXE::block create_deterministic_genesis_block(
+    TXE::SimpleLMDB &db, // To store the genesis block and its output
+    hw::device &hwdev,
+    const crypto::secret_key &genesis_master_secret_key // The core secret key for determinism
+)
+{
+    std::cout << "Creating deterministic genesis block..." << std::endl;
+
+    // --- 1. Define Fixed Genesis Parameters ---
+    const uint64_t GENESIS_TIMESTAMP = 1672531200; // Example: Jan 1, 2023 00:00:00 UTC
+    const std::string GENESIS_EXTRA_MESSAGE = "Genesis 1: 26-28";
+    const uint64_t GENESIS_COINBASE_AMOUNT = 1000000; // 1000 TXE (3 decimal places)
+    const uint32_t GENESIS_TX_VERSION = 1;                   // Your CLSAG+BP tx version
+    const uint32_t GENESIS_BLOCK_VERSION = 1;
+    const uint64_t GENESIS_NONCE = 0; // Can be fixed or derived
+    const uint64_t GENESIS_TARGET = 18446744073709551615;
+
+    // --- 2. Derive Keys and Seeds from genesis_master_secret_key ---
+
+    // Derive recipient keys for the genesis coinbase output
+    crypto::secret_key genesis_recipient_spend_sk_derived;
+    crypto::public_key genesis_recipient_spend_pk_derived;
+    crypto::hash recipient_sk_hash;
+    crypto::cn_fast_hash(&genesis_master_secret_key, sizeof(genesis_master_secret_key), recipient_sk_hash);
+    genesis_recipient_spend_sk_derived = reinterpret_cast<const crypto::secret_key &>(recipient_sk_hash);
+    crypto::secret_key_to_public_key(genesis_recipient_spend_sk_derived, genesis_recipient_spend_pk_derived);
+    // For simplicity, let's make view key same as spend key for this derived recipient,
+    // or derive it separately if needed for your wallet logic.
+    // If you need a separate view key for the recipient to scan:
+    crypto::hash view_key_seed_hash;
+    crypto::cn_fast_hash(&genesis_master_secret_key, sizeof(genesis_master_secret_key), view_key_seed_hash);                 // Hash master sk
+    crypto::secret_key genesis_recipient_view_sk_derived = reinterpret_cast<const crypto::secret_key &>(view_key_seed_hash); // Treat hash as sk
+    crypto::public_key genesis_recipient_view_pk_derived;
+    crypto::secret_key_to_public_key(genesis_recipient_view_sk_derived, genesis_recipient_view_pk_derived);
+
+    // Derive keys for the dummy input of the coinbase transaction
+    crypto::hash dummy_input_sk_seed_hash;
+    char dummy_seed_modifier[] = "dummy_input";
+    std::string dummy_input_seed_material = std::string(reinterpret_cast<const char *>(genesis_master_secret_key.data), sizeof(genesis_master_secret_key.data)) + dummy_seed_modifier;
+    crypto::cn_fast_hash(dummy_input_seed_material.data(), dummy_input_seed_material.size(), dummy_input_sk_seed_hash);
+
+    rct::ctkey genesis_dummy_inSk;
+    genesis_dummy_inSk.dest = rct::sk2rct(reinterpret_cast<const crypto::secret_key &>(dummy_input_sk_seed_hash)); // x_in
+    rct::skpkGen(genesis_dummy_inSk.dest, genesis_dummy_inSk.mask);                                                // P_in = x_in * G. Store P_in in mask for this dummy usage.
+                                                                                                                   // Actually, ctkey is {dest, mask}. P_in (dest) and C_in (mask)
+    rct::ctkey genesis_dummy_inPk;
+    genesis_dummy_inPk.dest = genesis_dummy_inSk.mask; // P_in (public key part)
+    genesis_dummy_inPk.mask = rct::identity();         // C_in (commitment to 0 amount with 0 mask for dummy)
+                                                       // C = aG + mH. If a=0, m=0, C=0. If using identity() (0*G), it's fine.
+
+        char header_seed_modifier[] = "The name of God is sacred";
+    crypto::hash genesis_header_randomx_seed = crypto::cn_fast_hash(header_seed_modifier, 26);
+
+    // --- 3. Create Genesis Coinbase Transaction (TXE::tx) ---
+    TXE::tx coinbase_tx;
+    coinbase_tx.version = GENESIS_TX_VERSION;
+    coinbase_tx.fee = 0;
+    coinbase_tx.signature.type = rct::RCTTypeCLSAG; // Set explicitly
+
+    // a. Dummy Input (vin)
+    TXE::tx_input dummy_input;
+    dummy_input.amount = 0;
+    crypto::generate_key_image(reinterpret_cast<const crypto::public_key &>(genesis_dummy_inPk.dest),
+                               reinterpret_cast<const crypto::secret_key &>(genesis_dummy_inSk.dest),
+                               dummy_input.image);
+    dummy_input.key_offsets = {}; // No real previous outputs
+    coinbase_tx.vin.push_back(dummy_input);
+
+    // b. Output (vout) - will be mostly populated by `make`
+    coinbase_tx.vout.resize(1); // One output for the genesis amount
+
+    // c. Extra Data
+    coinbase_tx.extra.assign(GENESIS_EXTRA_MESSAGE.begin(), GENESIS_EXTRA_MESSAGE.end());
+
+    // d. Prepare parameters for tx::make
+    std::vector<rct::ctkey> in_sk_vec = {genesis_dummy_inSk};
+    std::vector<rct::ctkey> in_pk_vec = {genesis_dummy_inPk};
+    std::vector<uint64_t> in_amounts_vec = {0};
+
+    // Create the one-time output destination key for the genesis recipient
+    crypto::secret_key tx_ephemeral_sk_r_genesis; // Ephemeral key for this genesis coinbase tx
+    crypto::public_key tx_ephemeral_pk_R_genesis;
+    // Derive tx ephemeral key deterministically too, so R is always the same for genesis
+    crypto::hash genesis_tx_r_seed_hash;
+    char tx_r_modifier[] = "genesis_tx_r";
+    std::string tx_r_seed_material = std::string(reinterpret_cast<const char *>(genesis_master_secret_key.data), sizeof(genesis_master_secret_key.data)) + tx_r_modifier;
+    crypto::cn_fast_hash(tx_r_seed_material.data(), tx_r_seed_material.size(), genesis_tx_r_seed_hash);
+    tx_ephemeral_sk_r_genesis = reinterpret_cast<const crypto::secret_key &>(genesis_tx_r_seed_hash);
+    crypto::secret_key_to_public_key(tx_ephemeral_sk_r_genesis, tx_ephemeral_pk_R_genesis);
+
+    rct::keyV destinations_for_make(1);
+    rct::keyV amount_keys_for_make(1);
+    std::vector<uint64_t> out_amounts_for_make = {GENESIS_COINBASE_AMOUNT};
+
+    crypto::key_derivation derivation_recipient;
+    crypto::generate_key_derivation(genesis_recipient_spend_pk_derived, tx_ephemeral_sk_r_genesis, derivation_recipient);
+    crypto::derive_public_key(derivation_recipient, 0, genesis_recipient_spend_pk_derived, reinterpret_cast<crypto::public_key &>(destinations_for_make[0]));
+
+    crypto::ec_scalar scalar_for_ecdh;
+    crypto::derivation_to_scalar(derivation_recipient, 0, scalar_for_ecdh);
+    std::memcpy(amount_keys_for_make[0].bytes, scalar_for_ecdh.data, sizeof(scalar_for_ecdh.data));
+
+    // e. Call tx::make
+    std::cout << "   Making genesis coinbase signature..." << std::endl;
+    coinbase_tx.signature = coinbase_tx.make(
+        in_sk_vec, in_pk_vec, destinations_for_make,
+        in_amounts_vec, out_amounts_for_make, amount_keys_for_make,
+        0 /*mixin for genesis coinbase input*/, hwdev);
+
+    // f. Populate coinbase_tx.vout and coinbase_tx.ecdh_info from the signature
+    if (coinbase_tx.signature.outPk.size() != 1 || coinbase_tx.signature.ecdhInfo.size() != 1)
+    {
+        throw std::runtime_error("Genesis coinbase creation: outPk or ecdhInfo not correctly sized by genRctSimple.");
+    }
+    coinbase_tx.vout[0].ephemeral_pub_key = reinterpret_cast<const crypto::public_key &>(coinbase_tx.signature.outPk[0].dest);
+    coinbase_tx.vout[0].commitment = coinbase_tx.signature.outPk[0].mask;
+    // coinbase_tx.vout[0].opcodes = ""; // Already default
+    coinbase_tx.ecdh_info = coinbase_tx.signature.ecdhInfo;
+
+    std::cout << "   Genesis coinbase transaction created." << std::endl;
+
+    // --- 4. Create Genesis Block Header (TXE::header) ---
+    TXE::header genesis_header;
+    genesis_header.ver = GENESIS_BLOCK_VERSION;
+    genesis_header.timestamp = GENESIS_TIMESTAMP;
+    genesis_header.nonce = GENESIS_NONCE;
+    genesis_header.target = GENESIS_TARGET;
+    genesis_header.tip_ids.clear(); // No parents
+
+    // Merkle Root (only the coinbase tx)
+    std::string miner_tx_blob = coinbase_tx.serialize_tx();
+    crypto::cn_fast_hash(miner_tx_blob.data(), miner_tx_blob.size(), genesis_header.merkle_root);
+
+    // RandomX seed for this block's header hash calculation
+    genesis_header.seed = genesis_header_randomx_seed;
+
+    // Calculate Header ID (PoW hash of the header)
+    // The calculate_header_id in your block.cpp uses its own internal fixed seed for RandomX cache.
+    // This is fine, as long as it's deterministic.
+    std::cout << "   Calculating genesis block header ID..." << std::endl;
+    genesis_header.calculate_header_id();
+    std::cout << "   Genesis block header ID calculated." << std::endl;
+
+    // --- 5. Assemble Genesis Block (TXE::block) ---
+    TXE::block genesis_block_obj;
+    genesis_block_obj.hdr = genesis_header;
+    genesis_block_obj.miner_tx = coinbase_tx;
+    genesis_block_obj.txlist.clear(); // No other transactions
+
+    std::cout << "Genesis block assembled." << std::endl;
+
+    return genesis_block_obj;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2)
@@ -373,20 +527,14 @@ int main(int argc, char *argv[])
         if (mdb_txn_begin(db.env, nullptr, 0, &genesis_txn))
             throw std::runtime_error("Failed to begin genesis block transaction");
 
-        TXE::tx t;
-        TXE::block b;
-
-        b.hdr.ver = 1;
-        b.hdr.timestamp = 1748655872 / 86400;
-        b.hdr.timestamp = 0;
-        b.hdr.tip_ids = {};
-        b.hdr.seed = crypto::hash(0);
-
-        b.hdr.merkle_root = crypto::hash(0);
-        b.hdr.header_id = crypto::hash(0);
-
-        t.version = 1;
-        t.fee = 0;
+        crypto::secret_key genesis_key;
+        std::string seed_string = "One Way!";
+        crypto::hash seed_hash;
+        crypto::cn_fast_hash(seed_string.data(), seed_string.length(), seed_hash);
+        std::memcpy(genesis_key.data, seed_hash.data, sizeof(genesis_key.data));
+        TXE::block genesis = create_deterministic_genesis_block(db, hw::get_device("default"), genesis_key);
+        std::cout << genesis.serialize_block() << "\n\n";
+        std::cout << TXE::block::deserialize_block(genesis.serialize_block()).serialize_block() << std::endl;
     }
     if (std::string(argv[1]) == "wallet")
     {

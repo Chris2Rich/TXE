@@ -256,6 +256,9 @@ namespace TXE
       append_varint(buf, proof.R.size());
       for (auto const &R_i : proof.R)
         append_key(buf, R_i);
+      append_key(buf, proof.a);
+      append_key(buf, proof.b);
+      append_key(buf, proof.t);
     }
 
     static void serialize_clsag(const rct::clsag &c, std::string &buf)
