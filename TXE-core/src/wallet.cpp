@@ -32,10 +32,16 @@ namespace TXE
     // Derive a 32-byte key from password+salt
     static void derive_key(const std::string &password, const crypto::hash &salt, unsigned char out_key[32])
     {
-      crypto::hash h;
-      std::string combined = password + std::string((char *)&salt, sizeof(salt));
-      crypto::cn_fast_hash(combined.data(), combined.size(), h);
-      std::memcpy(out_key, h.data, 32);
+      const int iterations = 10000;
+      crypto::hash current = salt;
+
+      for (int i = 0; i < iterations; ++i)
+      {
+        std::string combined = password + std::string((char *)&current, sizeof(current));
+        crypto::cn_fast_hash(combined.data(), combined.size(), current);
+      }
+
+      std::memcpy(out_key, current.data, 32);
     }
 
   public:
@@ -61,17 +67,17 @@ namespace TXE
         throw std::runtime_error("RAND_bytes failed");
 
       // 5) Serialize plaintext blob (keys) into buffer
-      unsigned char plaintext[sizeof(view_pub) + sizeof(view_sec) +
-                              sizeof(spend_pub) + sizeof(spend_sec)];
+      unsigned char plaintext[sizeof(view_pub.data) + sizeof(view_sec.data) +
+                              sizeof(spend_pub.data) + sizeof(spend_sec.data)];
       unsigned char *p = plaintext;
-      std::memcpy(p, &view_pub, sizeof(view_pub));
-      p += sizeof(view_pub);
-      std::memcpy(p, &view_sec, sizeof(view_sec));
-      p += sizeof(view_sec);
-      std::memcpy(p, &spend_pub, sizeof(spend_pub));
-      p += sizeof(spend_pub);
-      std::memcpy(p, &spend_sec, sizeof(spend_sec));
-      p += sizeof(spend_sec);
+      std::memcpy(p, view_pub.data, sizeof(view_pub.data));
+      p += sizeof(view_pub.data);
+      std::memcpy(p, view_sec.data, sizeof(view_sec.data));
+      p += sizeof(view_sec.data);
+      std::memcpy(p, spend_pub.data, sizeof(spend_pub.data));
+      p += sizeof(spend_pub.data);
+      std::memcpy(p, spend_sec.data, sizeof(spend_sec.data));
+      p += sizeof(spend_sec.data);
       int plaintext_len = p - plaintext;
 
       // 6) Encrypt with AES‑256‑CBC + PKCS#7 (via OpenSSL EVP)
@@ -143,14 +149,14 @@ namespace TXE
 
       WalletKeys w;
       unsigned char *p = plaintext.data();
-      std::memcpy(&w.view_pub, p, sizeof(w.view_pub));
-      p += sizeof(w.view_pub);
-      std::memcpy(&w.view_sec, p, sizeof(w.view_sec));
-      p += sizeof(w.view_sec);
-      std::memcpy(&w.spend_pub, p, sizeof(w.spend_pub));
-      p += sizeof(w.spend_pub);
-      std::memcpy(&w.spend_sec, p, sizeof(w.spend_sec));
-      p += sizeof(w.spend_sec);
+      std::memcpy(w.view_pub.data, p, sizeof(w.view_pub.data));
+      p += sizeof(w.view_pub.data);
+      std::memcpy(w.view_sec.data, p, sizeof(w.view_sec.data));
+      p += sizeof(w.view_sec.data);
+      std::memcpy(w.spend_pub.data, p, sizeof(w.spend_pub.data));
+      p += sizeof(w.spend_pub.data);
+      std::memcpy(w.spend_sec.data, p, sizeof(w.spend_sec.data));
+      p += sizeof(w.spend_sec.data);
 
       return w;
     }

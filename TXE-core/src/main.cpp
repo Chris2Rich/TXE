@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <ringct/rctTypes.h>
+#include <crypto/crypto.h>
 #include <device/device.hpp>
 
 template <typename T> // T should be crypto::public_key or crypto::secret_key
@@ -128,7 +129,8 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
     rct::ctkey dummy_decoy_ctkey;
     TXE::WalletKeys dummy_owner = TXE::WalletKeys::generate();
     std::cout << "Creating decoy outputs..." << std::endl;
-    for (int i = 2; i < 17; i++) {
+    for (int i = 2; i < 17; i++)
+    {
         create_mock_spendable_output_for_wallet(db, i, dummy_owner, 500 + (i * 100), dummy_decoy_ctkey);
     }
     std::cout << "Created 15 additional outputs for decoys (total outputs in DB: ~17)." << std::endl;
@@ -366,7 +368,25 @@ int main(int argc, char *argv[])
             throw std::runtime_error("Failed to commit init transaction");
 
         std::cout << "LMDB initialized with tables: blocks, key_images, ring_members, transactions, outputs" << std::endl;
-        
+
+        MDB_txn *genesis_txn;
+        if (mdb_txn_begin(db.env, nullptr, 0, &genesis_txn))
+            throw std::runtime_error("Failed to begin genesis block transaction");
+
+        TXE::tx t;
+        TXE::block b;
+
+        b.hdr.ver = 1;
+        b.hdr.timestamp = 1748655872 / 86400;
+        b.hdr.timestamp = 0;
+        b.hdr.tip_ids = {};
+        b.hdr.seed = crypto::hash(0);
+
+        b.hdr.merkle_root = crypto::hash(0);
+        b.hdr.header_id = crypto::hash(0);
+
+        t.version = 1;
+        t.fee = 0;
     }
     if (std::string(argv[1]) == "wallet")
     {
@@ -379,10 +399,26 @@ int main(int argc, char *argv[])
             std::cin >> pass;
             std::cout << std::endl;
 
-            TXE::WalletKeys k;
-            k.generate();
+            TXE::WalletKeys k = TXE::WalletKeys::generate();
             k.save(std::string(argv[3]), pass);
             std::cout << "wallet keys saved at: " << std::string(argv[3]) << std::endl;
+        }
+        // wallet list "filepath" password
+        if (std::string(argv[2]) == "view")
+        {
+
+            std::string pass;
+            std::cout << "Input Password: ";
+            std::cin >> pass;
+            std::cout << std::endl;
+
+            TXE::WalletKeys k = TXE::WalletKeys::load(std::string(argv[3]), pass);
+
+            std::cout << "wallet keys from: " << std::string(argv[3]) << std::endl;
+            std::cout << "Spend Public Key: " << k.spend_pub << std::endl;
+            std::cout << "Spend Secret Key: " << crypto::secret_key_explicit_print_ref{k.spend_sec} << std::endl;
+            std::cout << "View Public Key:  " << k.view_pub << std::endl;
+            std::cout << "View Secret Key:  " << crypto::secret_key_explicit_print_ref{k.view_sec} << std::endl;
         }
     }
     return 0;
