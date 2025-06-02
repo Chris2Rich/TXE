@@ -46,16 +46,14 @@ pkg_check_modules(PC_UNBOUND QUIET libunbound)
 # ─────────────────────────────────────────────────────────────────────────────
 add_executable(TXE
   ${CMAKE_SOURCE_DIR}/TXE-core/src/main.cpp
-  ${CMAKE_SOURCE_DIR}/TXE-core/src/wallet.cpp
-  ${CMAKE_SOURCE_DIR}/TXE-core/src/tx.cpp
-  ${CMAKE_SOURCE_DIR}/TXE-core/src/block.cpp
-  ${CMAKE_SOURCE_DIR}/TXE-core/src/db.cpp
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5) INCLUDE MONERO HEADERS
+# 5) INCLUDE HEADERS
 # ─────────────────────────────────────────────────────────────────────────────
 target_include_directories(TXE PRIVATE
+  ${CMAKE_SOURCE_DIR}/TXE-core/src
+
   ${CMAKE_SOURCE_DIR}/monero/src
   ${CMAKE_SOURCE_DIR}/monero/contrib/epee/include
   ${CMAKE_SOURCE_DIR}/monero/external/easylogging++

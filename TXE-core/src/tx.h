@@ -1,11 +1,12 @@
 #ifndef __tx
 #define __tx
 
-#include "db.cpp"
+#include <db.h>
 #include <crypto/crypto.h>
 #include <ringct/rctOps.h>
 #include <ringct/rctTypes.h>
 #include <ringct/rctSigs.h>
+#include <device/device.hpp>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -39,6 +40,82 @@ namespace TXE
               const rct::key &comm,
               const std::string &opc = "")
         : ephemeral_pub_key(pk), commitment(comm), opcodes(opc) {}
+
+    static void append_varint(std::string &buf, uint64_t x)
+    {
+      while (x >= 0x80)
+      {
+        buf.push_back(char((x & 0x7f) | 0x80));
+        x >>= 7;
+      }
+      buf.push_back(char(x));
+    }
+
+    std::string serialize()
+    {
+      std::string buf;
+      buf.append(reinterpret_cast<const char *>(ephemeral_pub_key.data), 32);
+      buf.append(reinterpret_cast<const char *>(commitment.bytes), 32);
+
+      append_varint(buf, opcodes.size());
+      if (!opcodes.empty())
+      {
+        buf.append(opcodes.data(), opcodes.size());
+      }
+      return buf;
+    }
+
+    static tx_output deserialize(std::string &blob)
+    {
+      tx_output out;
+      size_t offset = 0;
+      auto require = [&](size_t sz)
+      {
+        if (offset + sz > blob.size())
+          throw std::runtime_error("Blob too small for tx_out deserialization");
+      };
+      auto read_actual_pubkey = [&](crypto::public_key &pk_data_owner)
+      {
+        require(32);
+        std::memcpy(pk_data_owner.data, blob.data() + offset, 32);
+        offset += 32;
+      };
+      auto read_key = [&](rct::key &k)
+      {
+        require(32);
+        std::memcpy(k.bytes, blob.data() + offset, 32);
+        offset += 32;
+      };
+      auto read_varint = [&]
+      {
+        uint64_t x = 0;
+        int shift = 0;
+        while (true)
+        {
+          require(1);
+          uint8_t byte = static_cast<uint8_t>(blob[offset++]);
+          x |= uint64_t(byte & 0x7F) << shift;
+          if ((byte & 0x80) == 0)
+            break;
+          shift += 7;
+        }
+        return x;
+      };
+      read_actual_pubkey(out.ephemeral_pub_key);
+      read_key(out.commitment);
+
+      uint64_t opcodes_len = read_varint();
+      if (opcodes_len > 0)
+      {
+        require(opcodes_len);
+        out.opcodes.assign(blob.data() + offset, blob.data() + offset + opcodes_len);
+        offset += opcodes_len;
+      }
+      else
+      {
+        out.opcodes.clear();
+      }
+    }
   };
 
   struct tx
@@ -74,7 +151,11 @@ namespace TXE
     void getKeyFromBlockchain(rct::ctkey &a, size_t reference_index, SimpleLMDB &db)
     {
       std::string key = std::to_string(reference_index);
-      std::string blob = db.get("output_index", key);
+      std::string blob = db.get("output_indexes", key);
+
+      if (blob.size() != 64) {
+        throw std::runtime_error("Invalid output blob size from output_indexes for key " + key + ". Expected 64, Got " + std::to_string(blob.size()));
+    }
 
       std::memcpy(a.mask.bytes, blob.data(), 32);
       std::memcpy(a.dest.bytes, blob.data() + 32, 32);
@@ -110,7 +191,7 @@ namespace TXE
       {
         try
         {
-          total_globally_indexed_outputs = db.count_fast("outputs");
+          total_globally_indexed_outputs = db.count_fast("output_indexes");
           if (total_globally_indexed_outputs < ring_size)
           {
             throw std::runtime_error("Not enough unique outputs on chain (" +
@@ -352,87 +433,7 @@ namespace TXE
       return k;
     }
 
-    static rct::key get_message_for_clsag(const rct::rctSig &rv)
-    {
-      std::vector<rct::key> intermediate_hashes_for_final_hash;
-      intermediate_hashes_for_final_hash.reserve(3);
-      intermediate_hashes_for_final_hash.push_back(rv.message);
-      std::string rctsig_base_blob;
-      append_pod(rctsig_base_blob, rv.type);
-      append_pod(rctsig_base_blob, rv.txnFee);
-
-      append_varint(rctsig_base_blob, rv.ecdhInfo.size());
-      for (const auto &ec : rv.ecdhInfo)
-      {
-        append_key(rctsig_base_blob, ec.mask);
-        append_key(rctsig_base_blob, ec.amount);
-      }
-
-      append_varint(rctsig_base_blob, rv.outPk.size());
-      for (const auto &opk_member : rv.outPk)
-      {
-        append_key(rctsig_base_blob, opk_member.dest);
-        append_key(rctsig_base_blob, opk_member.mask);
-      }
-      append_varint(rctsig_base_blob, rv.p.pseudoOuts.size());
-      for (const auto &po : rv.p.pseudoOuts)
-      {
-        append_key(rctsig_base_blob, po);
-      }
-      append_varint(rctsig_base_blob, rv.mixRing.size());
-      if (!rv.mixRing.empty())
-      {
-        append_varint(rctsig_base_blob, rv.mixRing[0].size());
-        for (const auto &ring_for_input : rv.mixRing)
-        {
-          for (const auto &member_ctkey : ring_for_input)
-          {
-            append_key(rctsig_base_blob, member_ctkey.dest);
-            append_key(rctsig_base_blob, member_ctkey.mask);
-          }
-        }
-      }
-      else
-      {
-        append_varint(rctsig_base_blob, 0);
-      }
-
-      crypto::hash h_rctsig_base;
-      crypto::cn_fast_hash(rctsig_base_blob.data(), rctsig_base_blob.size(), h_rctsig_base);
-      intermediate_hashes_for_final_hash.push_back(rct::hash2rct(h_rctsig_base));
-      std::string bp_components_blob;
-      if (!rv.p.bulletproofs.empty())
-      {
-        const auto &proof = rv.p.bulletproofs[0];
-        append_key(bp_components_blob, proof.A);
-        append_key(bp_components_blob, proof.S);
-        append_key(bp_components_blob, proof.T1);
-        append_key(bp_components_blob, proof.T2);
-        append_key(bp_components_blob, proof.taux);
-        append_key(bp_components_blob, proof.mu);
-        append_varint(bp_components_blob, proof.L.size());
-        for (const auto &l_val : proof.L)
-          append_key(bp_components_blob, l_val);
-        append_varint(bp_components_blob, proof.R.size());
-        for (const auto &r_val : proof.R)
-          append_key(bp_components_blob, r_val);
-        append_key(bp_components_blob, proof.a);
-        append_key(bp_components_blob, proof.b);
-        append_key(bp_components_blob, proof.t);
-      }
-      crypto::hash h_bp_components;
-      crypto::cn_fast_hash(bp_components_blob.data(), bp_components_blob.size(), h_bp_components);
-      intermediate_hashes_for_final_hash.push_back(rct::hash2rct(h_bp_components));
-      std::string final_blob_to_hash;
-      for (const auto &k : intermediate_hashes_for_final_hash)
-      {
-        append_key(final_blob_to_hash, k);
-      }
-      crypto::hash final_message_hash_val;
-      crypto::cn_fast_hash(final_blob_to_hash.data(), final_blob_to_hash.size(), final_message_hash_val);
-      return rct::hash2rct(final_message_hash_val);
-    }
-
+    
     rct::rctSig make(
         const std::vector<rct::ctkey> &inSk,
         const std::vector<rct::ctkey> &inPk,
@@ -441,9 +442,10 @@ namespace TXE
         const std::vector<uint64_t> &outAmounts,
         const rct::keyV &amount_keys,
         int mixin,
-        hw::device &hwdev)
+        hw::device &hwdev,
+        SimpleLMDB& db,
+        bool is_coinbase=false)
     {
-      SimpleLMDB db("./lmdb_data");
       rct::key msg = get_prefix_hash(*this);
 
       rct::RCTConfig rct_config;
@@ -464,7 +466,10 @@ namespace TXE
         indices[i] = static_cast<unsigned int>(real_idx_for_input_i);
       }
       rct::ctkeyV outSk;
-
+      rct::keyV final_keys = amount_keys;
+      if(is_coinbase){
+        final_keys[0] = rct::zero();
+      }
       return rct::genRctSimple(
           msg,
           inSk,
@@ -473,17 +478,16 @@ namespace TXE
           outAmounts,
           this->fee,
           an_mixRing,
-          amount_keys,
+          final_keys,
           indices,
           outSk,
           rct_config,
           hwdev);
     }
 
-    bool ver(bool check_semantics, bool check_signature)
+    bool ver(SimpleLMDB &db, bool check_semantics, bool check_signature, bool check_inputs = true)
     {
       const rct::rctSig &rv = this->signature;
-      SimpleLMDB db("./lmdb_data");
 
       const int EXPECTED_TX_TYPE = rct::RCTTypeCLSAG;
 
@@ -499,11 +503,15 @@ namespace TXE
           std::cout << "Mismatched output count and bulletproof amounts." << std::endl;
           return false;
         }
-        if (rv.p.CLSAGs.size() != this->vin.size() || rv.p.CLSAGs.size() != rv.p.pseudoOuts.size())
+        if (check_inputs)
         {
-          std::cout << "Mismatched CLSAGs, inputs, or pseudoOuts." << std::endl;
-          return false;
+          if (rv.p.CLSAGs.size() != this->vin.size() || rv.p.CLSAGs.size() != rv.p.pseudoOuts.size())
+          {
+            std::cout << "Mismatched CLSAGs, inputs, or pseudoOuts." << std::endl;
+            return false;
+          }
         }
+
         if (rv.mixRing.size() != rv.p.CLSAGs.size())
         {
           std::cout << "Mismatched mixRing and CLSAGs." << std::endl;
@@ -536,7 +544,7 @@ namespace TXE
           return false;
         }
 
-        rct::key message_for_clsags = get_message_for_clsag(rv);
+        rct::key message_for_clsags = rct::get_pre_mlsag_hash(rv, hw::get_device("default"));
         for (size_t i = 0; i < rv.p.CLSAGs.size(); ++i)
         {
           if (i >= rv.mixRing.size() || i >= rv.p.pseudoOuts.size())
@@ -551,7 +559,8 @@ namespace TXE
           }
         }
       }
-      for (auto const &in : vin)
+      if(check_inputs){
+        for (auto const &in : vin)
       {
         std::string ki_blob(reinterpret_cast<const char *>(in.image.data), 32);
 
@@ -567,10 +576,6 @@ namespace TXE
             throw;
         }
       }
-      for (auto const &in : vin)
-      {
-        std::string ki_blob(reinterpret_cast<const char *>(in.image.data), 32);
-        db.put("key_images", ki_blob, "");
       }
       return true;
     }

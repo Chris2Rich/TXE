@@ -1,7 +1,8 @@
-#include "wallet.cpp"
-#include "tx.cpp"
-#include "block.cpp"
-#include "db.cpp"
+#include <wallet.h>
+#include <tx.h>
+#include <block.h>
+#include <db.h>
+#include <mining.h>
 
 #include <iostream>
 #include <string>
@@ -81,14 +82,14 @@ std::pair<rct::key, rct::key> create_mock_spendable_output_for_wallet(
     std::string ctkey_blob;
     ctkey_blob.append(reinterpret_cast<const char *>(generated_ctkey.mask.bytes), 32); // Commitment C
     ctkey_blob.append(reinterpret_cast<const char *>(generated_ctkey.dest.bytes), 32); // Public Key P
-    db.put("output_index", std::to_string(global_output_idx), ctkey_blob);
+    db.put("output_indexes", std::to_string(global_output_idx), ctkey_blob);
     db.put("outputs", std::to_string(global_output_idx), "TEST");
 
     // Update global count (simplified)
     uint64_t current_count = 0;
     try
     {
-        current_count = db.count_fast("output_index");
+        current_count = db.count_fast("output_indexes");
     }
     catch (...)
     { /*ignore if table empty*/
@@ -96,7 +97,6 @@ std::pair<rct::key, rct::key> create_mock_spendable_output_for_wallet(
     // This isn't strictly needed if count_fast works on output_index directly.
     // But if you had a separate metadata counter:
     // db.put("metadata", "@GLOBAL_OUTPUT_COUNT", std::to_string(current_count));
-
     return {rct::sk2rct(one_time_output_sk_x), commitment_mask_a}; // Return x and a
 }
 
@@ -133,7 +133,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
     {
         create_mock_spendable_output_for_wallet(db, i, dummy_owner, 500 + (i * 100), dummy_decoy_ctkey);
     }
-    std::cout << "Created 15 additional outputs for decoys (total outputs in DB: ~17)." << std::endl;
+    std::cout << "Created 15 additional outputs for decoys " << std::endl;
 
     // --- TEST 1: Correct Transaction (1 input, 2 outputs) ---
     std::cout << "\n--- Test 1: Correct Transaction ---" << std::endl;
@@ -197,7 +197,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
         correct_tx.signature = correct_tx.make(
             correct_in_sk_vec, correct_in_pk_vec, destinations_for_make,
             correct_in_amounts_vec, out_amounts_for_make, amount_keys_for_make,
-            3 /*mixin*/, hwdev);
+            3 /*mixin*/, hwdev, db);
         // Populate vout and ecdhInfo from signature
         for (size_t i = 0; i < correct_tx.vout.size(); ++i)
         {
@@ -207,7 +207,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
         correct_tx.ecdh_info = correct_tx.signature.ecdhInfo;
 
         std::cout << "Correct TX created. Verifying..." << std::endl;
-        bool verified_correct = correct_tx.ver(true, true);
+        bool verified_correct = correct_tx.ver(db, true, true, true);
         assert(verified_correct && "Correctly created transaction FAILED verification!");
         std::cout << "SUCCESS: Correct transaction verified." << std::endl;
 
@@ -236,7 +236,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
         }
 
         std::cout << "Tampered BP.A. Verifying..." << std::endl;
-        bool verified_tampered_bp = tampered_tx_bp.ver(true, true);
+        bool verified_tampered_bp = tampered_tx_bp.ver(db, true, true, true);
         assert(!verified_tampered_bp && "Transaction with tampered Bulletproof.A unexpectedly VERIFIED!");
         if (!verified_tampered_bp)
         {
@@ -256,7 +256,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
         tampered_tx_clsag_s.signature.p.CLSAGs[0].s[0].bytes[0] ^= 0xFF; // Flip a byte
 
         std::cout << "Tampered CLSAG.s. Verifying..." << std::endl;
-        bool verified_tampered_clsag_s = tampered_tx_clsag_s.ver(true, true);
+        bool verified_tampered_clsag_s = tampered_tx_clsag_s.ver(db, true, true, true);
         assert(!verified_tampered_clsag_s && "Transaction with tampered CLSAG.s unexpectedly VERIFIED!");
         if (!verified_tampered_clsag_s)
         {
@@ -277,7 +277,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
                                           // The signature is still the one generated for the *original* fee.
 
     std::cout << "Tampered tx.fee (message for CLSAG will mismatch). Verifying..." << std::endl;
-    bool verified_tampered_fee = tampered_tx_fee.ver(true, true); // ver uses this tampered_tx_fee to recalc message
+    bool verified_tampered_fee = tampered_tx_fee.ver(db, true, true, true); // ver uses this tampered_tx_fee to recalc message
     assert(!verified_tampered_fee && "Transaction with tampered fee unexpectedly VERIFIED!");
     if (!verified_tampered_fee)
     {
@@ -290,7 +290,7 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
     // No need to tamper with the signature itself for this test.
     // The `ver` function's key image check should catch this.
     std::cout << "Attempting to verify transaction with already spent key image..." << std::endl;
-    bool verified_spent_ki = correct_tx.ver(true, true); // Semantic and sig checks should pass, but KI check should fail
+    bool verified_spent_ki = correct_tx.ver(db, true, true, true); // Semantic and sig checks should pass, but KI check should fail
     assert(!verified_spent_ki && "Transaction with spent key image unexpectedly VERIFIED (or an earlier check failed this path)!");
     if (!verified_spent_ki)
     {
@@ -308,8 +308,6 @@ void test_transactions(TXE::SimpleLMDB &db, hw::device &hwdev)
 
 int test(int argc, char *argv[])
 {
-    // Simplified main: just runs tests if no other command.
-    // Or you can add a "test" command: if (std::string(argv[1]) == "test")
     std::string db_path = "./lmdb_data";
     std::filesystem::remove_all(db_path); // Clean previous test run
     TXE::SimpleLMDB db(db_path);
@@ -318,12 +316,13 @@ int test(int argc, char *argv[])
     // Create necessary DBIs
     MDB_txn *setup_txn;
     mdb_txn_begin(db.env, nullptr, 0, &setup_txn);
-    db.get_dbi("blocks", setup_txn);
-    db.get_dbi("tips", setup_txn);
-    db.get_dbi("key_images", setup_txn);
-    db.get_dbi("transactions", setup_txn);
-    db.get_dbi("output_index", setup_txn);
-    db.get_dbi("outputs", setup_txn);
+    db.get_dbi("blocks", setup_txn);         // header_id : serialized block data
+    db.get_dbi("tips", setup_txn);           // numeric : header_id
+    db.get_dbi("key_images", setup_txn);     // key image : hash of tx that first included
+    db.get_dbi("transactions", setup_txn);   // hash of tx : serialized tx data
+    db.get_dbi("outputs", setup_txn);        // ephemeral key : serialized output data
+    db.get_dbi("output_indexes", setup_txn); // numeric : [32-byte commitment mask | 32-byte destination public key] -- doesnt matter for consensus
+    db.get_dbi("mempool", setup_txn);        // hash of tx : serialized tx data
     mdb_txn_commit(setup_txn);
 
     try
@@ -335,6 +334,7 @@ int test(int argc, char *argv[])
         std::cerr << "EXCEPTION during tests: " << e.what() << std::endl;
         return 1;
     }
+    std::filesystem::remove_all(db_path);
     return 0;
 }
 
@@ -347,13 +347,23 @@ TXE::block create_deterministic_genesis_block(
     std::cout << "Creating deterministic genesis block..." << std::endl;
 
     // --- 1. Define Fixed Genesis Parameters ---
-    const uint64_t GENESIS_TIMESTAMP = 1672531200; // Example: Jan 1, 2023 00:00:00 UTC
+    const uint64_t GENESIS_TIMESTAMP = 1748810142;
     const std::string GENESIS_EXTRA_MESSAGE = "Genesis 1: 26-28";
-    const uint64_t GENESIS_COINBASE_AMOUNT = 1000000; // 1000 TXE (3 decimal places)
-    const uint32_t GENESIS_TX_VERSION = 1;                   // Your CLSAG+BP tx version
+    const uint64_t GENESIS_COINBASE_AMOUNT = 10000000; // 10000 TXE (3 decimal places)
+    const uint32_t GENESIS_TX_VERSION = 1;             // Your CLSAG+BP tx version
     const uint32_t GENESIS_BLOCK_VERSION = 1;
     const uint64_t GENESIS_NONCE = 0; // Can be fixed or derived
-    const uint64_t GENESIS_TARGET = 18446744073709551615;
+    crypto::hash GENESIS_TARGET;
+    const uint8_t value[32] = {
+        0x00, 0x0f, 0xff, 0xf0,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00};
+    std::memcpy(GENESIS_TARGET.data, value, 32);
 
     // --- 2. Derive Keys and Seeds from genesis_master_secret_key ---
 
@@ -388,7 +398,7 @@ TXE::block create_deterministic_genesis_block(
     genesis_dummy_inPk.mask = rct::identity();         // C_in (commitment to 0 amount with 0 mask for dummy)
                                                        // C = aG + mH. If a=0, m=0, C=0. If using identity() (0*G), it's fine.
 
-        char header_seed_modifier[] = "The name of God is sacred";
+    char header_seed_modifier[] = "The name of God is sacred";
     crypto::hash genesis_header_randomx_seed = crypto::cn_fast_hash(header_seed_modifier, 26);
 
     // --- 3. Create Genesis Coinbase Transaction (TXE::tx) ---
@@ -445,7 +455,7 @@ TXE::block create_deterministic_genesis_block(
     coinbase_tx.signature = coinbase_tx.make(
         in_sk_vec, in_pk_vec, destinations_for_make,
         in_amounts_vec, out_amounts_for_make, amount_keys_for_make,
-        0 /*mixin for genesis coinbase input*/, hwdev);
+        0 /*mixin for genesis coinbase input*/, hwdev, db);
 
     // f. Populate coinbase_tx.vout and coinbase_tx.ecdh_info from the signature
     if (coinbase_tx.signature.outPk.size() != 1 || coinbase_tx.signature.ecdhInfo.size() != 1)
@@ -478,7 +488,7 @@ TXE::block create_deterministic_genesis_block(
     // The calculate_header_id in your block.cpp uses its own internal fixed seed for RandomX cache.
     // This is fine, as long as it's deterministic.
     std::cout << "   Calculating genesis block header ID..." << std::endl;
-    genesis_header.calculate_header_id();
+    genesis_header.calculate_header_id(genesis_header.header_id, GENESIS_TARGET);
     std::cout << "   Genesis block header ID calculated." << std::endl;
 
     // --- 5. Assemble Genesis Block (TXE::block) ---
@@ -507,25 +517,23 @@ int main(int argc, char *argv[])
     if (std::string(argv[1]) == "init")
     {
         TXE::SimpleLMDB db("./lmdb_data");
+        std::filesystem::remove_all("./lmdb_data");
         MDB_txn *txn;
         if (mdb_txn_begin(db.env, nullptr, 0, &txn))
             throw std::runtime_error("Failed to begin init transaction");
 
-        db.get_dbi("blocks", txn);
-        db.get_dbi("tips", txn);
-        db.get_dbi("key_images", txn);
-        db.get_dbi("transactions", txn);
-        db.get_dbi("outputs", txn);
-        db.get_dbi("output_indexes", txn);
+        db.get_dbi("blocks", txn);         // header_id : serialized block data
+        db.get_dbi("tips", txn);           // numeric : header_id
+        db.get_dbi("key_images", txn);     // key image : hash of tx that first included
+        db.get_dbi("transactions", txn);   // hash of tx : serialized tx data
+        db.get_dbi("outputs", txn);        // ephemeral key : serialized output data
+        db.get_dbi("output_indexes", txn); // numeric : [32-byte commitment mask | 32-byte destination public key] -- doesnt matter for consensus
+        db.get_dbi("mempool", txn);        // hash of tx : serialized tx data
 
         if (mdb_txn_commit(txn))
             throw std::runtime_error("Failed to commit init transaction");
 
         std::cout << "LMDB initialized with tables: blocks, key_images, ring_members, transactions, outputs" << std::endl;
-
-        MDB_txn *genesis_txn;
-        if (mdb_txn_begin(db.env, nullptr, 0, &genesis_txn))
-            throw std::runtime_error("Failed to begin genesis block transaction");
 
         crypto::secret_key genesis_key;
         std::string seed_string = "One Way!";
@@ -533,8 +541,7 @@ int main(int argc, char *argv[])
         crypto::cn_fast_hash(seed_string.data(), seed_string.length(), seed_hash);
         std::memcpy(genesis_key.data, seed_hash.data, sizeof(genesis_key.data));
         TXE::block genesis = create_deterministic_genesis_block(db, hw::get_device("default"), genesis_key);
-        std::cout << genesis.serialize_block() << "\n\n";
-        std::cout << TXE::block::deserialize_block(genesis.serialize_block()).serialize_block() << std::endl;
+        TXE::block::add_block_to_db(genesis, &db);
     }
     if (std::string(argv[1]) == "wallet")
     {
