@@ -6,6 +6,7 @@
 #include <cstring>
 #include <errno.h>
 #include <filesystem>
+#include <vector>
 
 namespace TXE
 {
@@ -107,6 +108,35 @@ namespace TXE
 
             mdb_txn_abort(txn);
             return stat.ms_entries;
+        }
+
+        std::vector<std::string> get_all(const std::string &table)
+        {
+            std::vector<std::string> res;
+
+            MDB_txn *txn;
+            if (mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn))
+                throw std::runtime_error("Failed to begin read transaction");
+
+            MDB_dbi dbi = get_dbi(table, txn);
+
+            MDB_cursor *cursor;
+            if (mdb_cursor_open(txn, dbi, &cursor))
+            {
+                mdb_txn_abort(txn);
+                throw std::runtime_error("Failed to open cursor");
+            }
+
+            MDB_val key, value;
+            while (mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == 0)
+            {
+                res.emplace_back(static_cast<char *>(value.mv_data), value.mv_size);
+            }
+
+            mdb_cursor_close(cursor);
+            mdb_txn_abort(txn); // Even for read-only transactions, you must close it
+
+            return res;
         }
     };
 }

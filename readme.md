@@ -10,18 +10,18 @@ day 2
 day 3
 - implement randomx
 
-# TODO
-
+day 4
 - finish decoy selection
 - test hash
-- implement opcodes for transaction validation
-
-day 4
-- tip selection (pick 1/2 of tips when creating new block)
-- implement mining daemon
 
 day 5
-- add data transfer (TCP)
+- implement mining daemon
+- implement opcodes for transaction validation
+- tip selection (pick 1/2 of tips when creating new block)
+- implement balance calculator
+
+# TODO
 
 day 6
-- implement balance calculator
+- finish spendable outputs
+- add data transfer (TCP)
