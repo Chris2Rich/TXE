@@ -30,6 +30,18 @@ bool hex_to_key(const std::string &hex_str, T &key_obj)
     return true;
 }
 
+std::string key_to_hex(const rct::key &key_obj)
+{
+    std::stringstream ss;
+    // rct::key uses .bytes instead of .data
+    const unsigned char *key_data = reinterpret_cast<const unsigned char *>(key_obj.bytes);
+    for (size_t i = 0; i < sizeof(key_obj.bytes); ++i) // or simply 32, as rct::key is fixed size
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(key_data[i]);
+    }
+    return ss.str();
+}
+
 // Helper to print keys (for debugging)
 template <typename T>
 std::string key_to_hex(const T &key_obj)
@@ -576,5 +588,306 @@ int main(int argc, char *argv[])
             std::cout << "View Secret Key:  " << crypto::secret_key_explicit_print_ref{k.view_sec} << std::endl;
         }
     }
-    return 0;
+    if (std::string(argv[1]) == "transact")
+    {
+        if (argc < 3)
+        {
+            std::cerr << "Usage: ./TXE transact <wallet_filepath>" << std::endl;
+            return 1;
+        }
+        std::string wallet_path = argv[2];
+        std::string password;
+        std::cout << "Enter wallet password: ";
+        std::cin >> password; // Note: for passwords with spaces, consider std::getline
+
+        TXE::WalletKeys sender_wallet;
+        try
+        {
+            sender_wallet = TXE::WalletKeys::load(wallet_path, password);
+            std::cout << "Wallet loaded successfully." << std::endl;
+            std::cout << "Sender Spend PubKey: " << key_to_hex(sender_wallet.spend_pub) << std::endl;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Failed to load wallet: " << e.what() << std::endl;
+            return 1;
+        }
+
+        TXE::SimpleLMDB db("./lmdb_data");
+        hw::device &hwdev = hw::get_device("default");
+
+        // --- Get Owned Outputs by Calling WalletKeys::get_owned ---
+        std::cout << "Scanning blockchain for spendable outputs... This may take some time if using block scan." << std::endl;
+        std::vector<TXE::SpendableOutputInfo> owned_outputs; // TXE:: namespace for clarity
+        try {
+            owned_outputs = sender_wallet.get_owned(db); // This now calls your implemented get_owned
+            std::cout << "Wallet sync complete." << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "Error during wallet sync (get_owned call): " << e.what() << std::endl;
+            return 1;
+        }
+        
+        // Note: The local 'SpendableOutputInfo' struct definition previously here is removed,
+        // as it's assumed to be globally available from an included header (e.g., wallet.h).
+
+        if (owned_outputs.empty())
+        {
+            std::cout << "Wallet has no spendable outputs found on the blockchain." << std::endl;
+            std::cerr << "Cannot create transaction with no spendable outputs." << std::endl;
+            return 1; 
+        }
+
+        std::cout << "Wallet's spendable outputs (" << owned_outputs.size() << " found):" << std::endl;
+        uint64_t total_owned_balance = 0;
+        for (const auto &out : owned_outputs)
+        {
+            total_owned_balance += out.amount;
+            // If get_owned uses block scanning, global_index might be an approximation.
+            std::cout << "  - Amount: " << out.amount
+                      << ", Global Index (approx if from block scan): " << out.global_index 
+                      << ", P: " << key_to_hex(out.pk_on_chain.dest).substr(0, 10) << "..." << std::endl;
+        }
+        std::cout << "Total available balance: " << total_owned_balance << std::endl;
+
+        // --- Gather Transaction Details ---
+        int num_recipients;
+        std::cout << "Enter number of recipients (distinct outputs): ";
+        std::cin >> num_recipients;
+         if (num_recipients <= 0) {
+             std::cerr << "Error: Number of recipients must be a positive integer." << std::endl;
+             return 1;
+        }
+
+        std::vector<std::pair<crypto::public_key, uint64_t>> conceptual_dests_amounts;
+        uint64_t total_sending_to_recipients = 0;
+
+        for (int i = 0; i < num_recipients; ++i)
+        {
+            std::string recipient_pk_hex;
+            uint64_t amount_to_send;
+            crypto::public_key recipient_pk;
+
+            std::cout << "For recipient #" << i + 1 << ":" << std::endl;
+            std::cout << "  Enter recipient public spend key (hex, 64 chars): ";
+            std::cin >> recipient_pk_hex;
+            if (!hex_to_key(recipient_pk_hex, recipient_pk))
+            {
+                std::cerr << "  Error: Invalid recipient public key format. Must be 64 hex characters." << std::endl;
+                return 1;
+            }
+            std::cout << "  Enter amount to send to this recipient: ";
+            std::cin >> amount_to_send;
+            if (amount_to_send == 0)
+            {
+                std::cerr << "  Error: Amount cannot be zero." << std::endl;
+                return 1;
+            }
+
+            conceptual_dests_amounts.push_back({recipient_pk, amount_to_send});
+            total_sending_to_recipients += amount_to_send;
+        }
+
+        uint64_t fee;
+        std::cout << "Enter transaction fee: ";
+        std::cin >> fee;
+        if (fee == 0) // Fee can be zero, but warn user
+        {
+            std::cout << "Warning: Using a zero fee. Transaction might not be prioritized by miners." << std::endl;
+        }
+
+        uint64_t total_required_for_tx = total_sending_to_recipients + fee;
+        std::cout << "Total to cover (recipients + fee): " << total_required_for_tx << std::endl;
+
+        if (total_owned_balance < total_required_for_tx)
+        {
+            std::cerr << "Error: Insufficient funds. Available: " << total_owned_balance
+                      << ", Required: " << total_required_for_tx << std::endl;
+            return 1;
+        }
+
+        // --- Select Inputs (strategy: use largest outputs first) ---
+        std::sort(owned_outputs.begin(), owned_outputs.end(),
+                  [](const TXE::SpendableOutputInfo &a, const TXE::SpendableOutputInfo &b) // Explicit TXE:: namespace
+                  {
+                      return a.amount > b.amount; // Sort descending by amount
+                  });
+
+        std::vector<TXE::SpendableOutputInfo> selected_inputs_info; // Explicit TXE:: namespace
+        uint64_t current_input_sum = 0;
+        for (const auto &owned_out_info : owned_outputs)
+        {
+            if (current_input_sum < total_required_for_tx)
+            {
+                selected_inputs_info.push_back(owned_out_info);
+                current_input_sum += owned_out_info.amount;
+            }
+            else
+            {
+                break; // Enough inputs selected
+            }
+        }
+
+        if (current_input_sum < total_required_for_tx)
+        {
+            std::cerr << "Error: Failed to select sufficient inputs even after initial balance check. (Available sum: " << current_input_sum << ")" << std::endl;
+            return 1;
+        }
+        std::cout << "Selected " << selected_inputs_info.size() << " inputs with a total value of " << current_input_sum << std::endl;
+
+        // --- Calculate Change and Add to Destinations ---
+        uint64_t change_amount = current_input_sum - total_required_for_tx;
+        if (change_amount > 0)
+        {
+            std::cout << "Change to be returned to sender: " << change_amount << std::endl;
+            conceptual_dests_amounts.push_back({sender_wallet.spend_pub, change_amount});
+        }
+
+        // --- Construct the Transaction Object ---
+        TXE::tx new_tx;
+        new_tx.version = 1;
+        new_tx.signature.type = rct::RCTTypeCLSAG; 
+        new_tx.fee = fee;
+
+        std::vector<rct::ctkey> in_sk_for_make; 
+        std::vector<rct::ctkey> in_pk_for_make; 
+        std::vector<uint64_t> in_amounts_for_make;
+
+        std::cout << "Preparing transaction inputs for signing:" << std::endl;
+        for (const auto &s_in_info : selected_inputs_info)
+        {
+            TXE::tx_input tx_in_struct;
+            crypto::generate_key_image(
+                reinterpret_cast<const crypto::public_key &>(s_in_info.pk_on_chain.dest), 
+                reinterpret_cast<const crypto::secret_key &>(s_in_info.sk_x),            
+                tx_in_struct.image);
+            tx_in_struct.key_offsets = {s_in_info.global_index}; 
+
+            new_tx.vin.push_back(tx_in_struct);
+            in_sk_for_make.push_back({s_in_info.sk_x, s_in_info.mask_a});
+            in_pk_for_make.push_back(s_in_info.pk_on_chain);
+            in_amounts_for_make.push_back(s_in_info.amount);
+            std::cout << "  Input: amt=" << s_in_info.amount
+                      << ", idx (approx if from block scan)=" << s_in_info.global_index
+                      << ", KI=" << key_to_hex(tx_in_struct.image).substr(0, 10) << "..." << std::endl;
+        }
+
+        new_tx.vout.resize(conceptual_dests_amounts.size()); 
+        rct::keyV out_dest_pubkeys_for_make(conceptual_dests_amounts.size()); 
+        rct::keyV out_amount_keys_for_make(conceptual_dests_amounts.size());  
+        std::vector<uint64_t> out_amounts_for_make(conceptual_dests_amounts.size());
+
+        crypto::secret_key tx_secret_key_r; 
+        crypto::public_key tx_public_key_R; 
+        crypto::generate_keys(tx_public_key_R, tx_secret_key_r);
+
+        new_tx.extra.resize(sizeof(tx_public_key_R));
+        memcpy(new_tx.extra.data(), tx_public_key_R.data, sizeof(tx_public_key_R));
+        std::cout << "Tx public key R: " << key_to_hex(tx_public_key_R) << " (added to tx.extra)" << std::endl;
+
+        std::cout << "Preparing transaction outputs for signing:" << std::endl;
+        for (size_t i = 0; i < conceptual_dests_amounts.size(); ++i)
+        {
+            const auto &recipient_spend_pub_B = conceptual_dests_amounts[i].first; 
+            out_amounts_for_make[i] = conceptual_dests_amounts[i].second;
+            crypto::key_derivation derivation;
+            if (!crypto::generate_key_derivation(recipient_spend_pub_B, tx_secret_key_r, derivation))
+            {
+                std::cerr << "Error: Failed to generate derivation for output #" << i << std::endl;
+                return 1;
+            }
+            crypto::public_key one_time_output_pk_P; 
+            if (!crypto::derive_public_key(derivation, i, recipient_spend_pub_B, one_time_output_pk_P))
+            {
+                std::cerr << "Error: Failed to derive public key P_out for output #" << i << std::endl;
+                return 1;
+            }
+            out_dest_pubkeys_for_make[i] = rct::pk2rct(one_time_output_pk_P);
+            crypto::ec_scalar scalar_for_ecdh_s_i; 
+            crypto::derivation_to_scalar(derivation, i, scalar_for_ecdh_s_i);
+            std::memcpy(out_amount_keys_for_make[i].bytes, scalar_for_ecdh_s_i.data, sizeof(scalar_for_ecdh_s_i.data));
+            std::cout << "  Output #" << i << ": amt=" << out_amounts_for_make[i]
+                      << ", To_B=" << key_to_hex(recipient_spend_pub_B).substr(0, 10) << "..."
+                      << ", P_out=" << key_to_hex(out_dest_pubkeys_for_make[i]).substr(0, 10) << "..." << std::endl;
+        }
+
+        size_t num_decoys_available_on_chain = 0; 
+        try
+        {
+            // This count is still used for determining mixin. It relies on 'output_indexes' table.
+            num_decoys_available_on_chain = db.count_fast("output_indexes");
+        }
+        catch (...) { /* ignore if table empty or error */ }
+
+        int mixin_count = 3; // Default desired mixin
+        if (num_decoys_available_on_chain <= 1) 
+        { 
+            mixin_count = 0;
+            if (num_decoys_available_on_chain > 0) { // Only print warning if there was at least 1 (the real one)
+                 std::cout << "Warning: Not enough distinct outputs on chain for decoys (or 'output_indexes' table is too small). Mixin set to 0." << std::endl;
+            } else {
+                 std::cout << "Info: No outputs found in 'output_indexes' table. Mixin set to 0." << std::endl;
+            }
+        }
+        else if (num_decoys_available_on_chain - 1 < static_cast<size_t>(mixin_count)) // -1 for the real input
+        {
+            mixin_count = num_decoys_available_on_chain - 1;
+            std::cout << "Warning: Adjusting mixin to " << mixin_count 
+                      << " due to limited number of decoy candidates in 'output_indexes' table." << std::endl;
+        }
+        std::cout << "Using mixin count: " << mixin_count << " (ring size " << mixin_count + 1 << ")" << std::endl;
+
+        // --- Generate Signature and Finalize Transaction ---
+        try
+        {
+            std::cout << "Calling tx.make() to generate signature..." << std::endl;
+            new_tx.signature = new_tx.make(
+                in_sk_for_make, in_pk_for_make, out_dest_pubkeys_for_make,
+                in_amounts_for_make, out_amounts_for_make, out_amount_keys_for_make,
+                mixin_count, hwdev, db);
+
+            if (new_tx.signature.outPk.size() != new_tx.vout.size() ||
+                new_tx.signature.ecdhInfo.size() != new_tx.vout.size())
+            {
+                std::cerr << "Error: Mismatch in sizes from tx.make signature components." << std::endl;
+                std::cerr << "  outPk size: " << new_tx.signature.outPk.size() << " vs vout size: " << new_tx.vout.size() << std::endl;
+                std::cerr << "  ecdhInfo size: " << new_tx.signature.ecdhInfo.size() << std::endl;
+                return 1;
+            }
+            for (size_t i = 0; i < new_tx.vout.size(); ++i)
+            {
+                new_tx.vout[i].ephemeral_pub_key = reinterpret_cast<const crypto::public_key &>(new_tx.signature.outPk[i].dest); 
+                new_tx.vout[i].commitment = new_tx.signature.outPk[i].mask;                       
+            }
+            new_tx.ecdh_info = new_tx.signature.ecdhInfo;
+
+            std::cout << "Transaction constructed. Verifying transaction..." << std::endl;
+            bool verified = new_tx.ver(db, true, true, true);
+
+            if (verified)
+            {
+                std::cout << "SUCCESS: Transaction verified." << std::endl;
+                std::string tx_blob = new_tx.serialize_tx();
+                crypto::hash tx_hash_val;
+                crypto::cn_fast_hash(tx_blob.data(), tx_blob.size(), tx_hash_val);
+                std::cout << "Transaction ID (hash): " << key_to_hex(tx_hash_val) << std::endl;
+                
+                for (const auto &vin_entry : new_tx.vin)
+                {
+                    db.put("key_images",
+                           std::string(reinterpret_cast<const char *>(vin_entry.image.data), sizeof(crypto::key_image)),
+                           std::string(reinterpret_cast<const char *>(tx_hash_val.data), sizeof(crypto::hash)));
+                }
+                std::cout << "Transaction ready. Key images for spent inputs have been recorded in the database." << std::endl;
+            }
+            else
+            {
+                std::cerr << "FAILURE: Transaction failed verification after construction." << std::endl;
+            }
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Error during tx.make() or final verification: " << e.what() << std::endl;
+            return 1;
+        }
+    }
 }

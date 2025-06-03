@@ -14,12 +14,14 @@ day 4
 - finish decoy selection
 - test hash
 
-# TODO
 day 5
 - implement mining daemon
 - implement opcodes for transaction validation
 - tip selection (pick 1/2 of tips when creating new block)
+- implement balance calculator
+
+# TODO
 
 day 6
+- finish spendable outputs
 - add data transfer (TCP)
-- implement balance calculator

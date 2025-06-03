@@ -409,8 +409,9 @@ namespace TXE
         uint64_t total_fees = 0;
         const size_t MAX_TX_PER_BLOCK = 4096;
         
-        std::set<crypto::key_image, crypto::key_image_less> block_key_images_check; 
-
+        auto key_image_less = [](const crypto::key_image& lhs, const crypto::key_image& rhs){return std::memcmp(lhs.data, rhs.data, sizeof(lhs.data)) < 0;};
+        std::set<crypto::key_image, decltype(key_image_less)> block_key_images_check(key_image_less); 
+        
         try {
             std::vector<std::string> mempool_tx_blobs = db.get_all("mempool");
             std::cout << "Mempool size: " << mempool_tx_blobs.size() << " transactions." << std::endl;
@@ -443,9 +444,9 @@ namespace TXE
                 } else {
                     std::cerr << "Transaction verification failed, not including in block." << std::endl;
                     // Optionally, remove invalid tx from mempool here
-                    // crypto::hash invalid_tx_hash;
-                    // crypto::cn_fast_hash(tx_blob_str.data(), tx_blob_str.size(), invalid_tx_hash);
-                    // db.del("mempool", std::string(reinterpret_cast<const char*>(invalid_tx_hash.data), sizeof(invalid_tx_hash.data)));
+                    crypto::hash invalid_tx_hash;
+                    crypto::cn_fast_hash(tx_blob_str.data(), tx_blob_str.size(), invalid_tx_hash);
+                    db.del("mempool", std::string(reinterpret_cast<const char*>(invalid_tx_hash.data), sizeof(invalid_tx_hash.data)));
                 }
             }
         } catch (const std::runtime_error& e) {

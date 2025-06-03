@@ -266,7 +266,7 @@ namespace TXE
                 return false;
             }
 
-            if (txlist.size() > 4096)
+            if (txlist.size() > 4096 || txlist.size() < 1)
             {
                 return false;
             }

@@ -1,18 +1,35 @@
 #ifndef __wallet
 #define __wallet
 
-#include <crypto/crypto.h>
-#include <openssl/evp.h>
-#include <openssl/rand.h>
-#include <fstream>
-#include <vector>
 #include <string>
-#include <stdexcept>
-#include <cstring>
-#include <iostream>
+#include <vector>
+#include <fstream>        // For WalletKeys::save/load
+#include <stdexcept>      // For WalletKeys::save/load
+#include <cstring>        // For WalletKeys::save/load
+#include <iostream>       // For WalletKeys::save/load (optional, for errors)
+#include <openssl/evp.h>  // For WalletKeys::save/load
+#include <openssl/rand.h> // For WalletKeys::save/load
+
+// --- Headers needed for get_owned ---
+#include <algorithm> // For std::sort
+#include <sstream>   // For key_to_hex_helper
+#include <iomanip>   // For key_to_hex_helper
+#include "db.h"      // For TXE::SimpleLMDB
+#include "tx.h"      // For TXE::tx, rct types, crypto types used by tx
+#include "block.h"   // For TXE::block
+#include "device/device.hpp"
 
 namespace TXE
 {
+  struct SpendableOutputInfo
+  {
+    uint64_t amount;
+    rct::key sk_x;          // one-time secret key to spend P
+    rct::key mask_a;        // commitment mask 'a' for C = aG + amount*H
+    rct::ctkey pk_on_chain; // P (dest) and C (mask) as stored on chain
+    size_t global_index;    // global index of this output on the blockchain
+  };
+
   struct WalletKeys
   {
     crypto::public_key view_pub;
@@ -160,6 +177,164 @@ namespace TXE
 
       return w;
     }
+
+    std::vector<SpendableOutputInfo> get_owned(SimpleLMDB &db)
+    {
+      std::vector<SpendableOutputInfo> owned_spendable_outputs;
+      hw::device &hwdev = hw::get_device("default");
+
+      MDB_txn *read_txn;
+      if (mdb_txn_begin(db.env, nullptr, MDB_RDONLY, &read_txn))
+      {
+        throw std::runtime_error("get_owned (block_scan): Failed to begin read transaction.");
+      }
+
+      MDB_dbi dbi_blocks = 0;
+      MDB_dbi dbi_key_images = 0;
+
+      try
+      {
+        dbi_blocks = db.get_dbi("blocks", read_txn);
+        dbi_key_images = db.get_dbi("key_images", read_txn);
+      }
+      catch (const std::runtime_error &e)
+      {
+        mdb_txn_abort(read_txn);
+        throw std::runtime_error("get_owned (block_scan): Failed to open DBIs: " + std::string(e.what()));
+      }
+
+      std::vector<std::pair<uint64_t, TXE::block>> temp_block_storage;
+      MDB_cursor *cursor_blocks;
+      if (mdb_cursor_open(read_txn, dbi_blocks, &cursor_blocks))
+      {
+        mdb_txn_abort(read_txn);
+        throw std::runtime_error("get_owned (block_scan): Failed to open cursor for blocks table.");
+      }
+      MDB_val mdb_block_key, mdb_block_value;
+      while (mdb_cursor_get(cursor_blocks, &mdb_block_key, &mdb_block_value, MDB_NEXT) == 0)
+      {
+        std::string block_blob(static_cast<char *>(mdb_block_value.mv_data), mdb_block_value.mv_size);
+        try
+        {
+          TXE::block current_block = TXE::block::deserialize_block(block_blob);
+          temp_block_storage.push_back({current_block.hdr.timestamp, current_block});
+        }
+        catch (const std::exception &e)
+        {
+          // std::cerr << "Warning (WalletKeys::get_owned block_scan): Failed to deserialize a block. Skipping. Error: " << e.what() << std::endl;
+        }
+      }
+      mdb_cursor_close(cursor_blocks);
+
+      std::sort(temp_block_storage.begin(), temp_block_storage.end(),
+                [](const auto &a, const auto &b)
+                { return a.first < b.first; });
+
+      size_t running_global_output_index = 0;
+
+      for (const auto &pair_ts_block : temp_block_storage)
+      {
+        const TXE::block &current_block = pair_ts_block.second;
+        std::vector<const TXE::tx *> txs_in_block;
+        txs_in_block.push_back(&current_block.miner_tx);
+        for (const auto &tx_from_list : current_block.txlist)
+        {
+          txs_in_block.push_back(&tx_from_list);
+        }
+
+        for (const TXE::tx *p_current_tx : txs_in_block)
+        {
+          const TXE::tx &current_tx = *p_current_tx;
+          if (current_tx.extra.size() < sizeof(crypto::public_key))
+          {
+            running_global_output_index += current_tx.signature.outPk.size();
+            continue;
+          }
+          crypto::public_key tx_R_key;
+          std::memcpy(tx_R_key.data, current_tx.extra.data(), sizeof(crypto::public_key));
+
+          for (size_t out_idx_in_tx = 0; out_idx_in_tx < current_tx.signature.outPk.size(); ++out_idx_in_tx)
+          {
+            const rct::ctkey &output_ctkey = current_tx.signature.outPk[out_idx_in_tx];
+            crypto::public_key P_on_chain_crypto;
+            std::memcpy(P_on_chain_crypto.data, output_ctkey.dest.bytes, sizeof(crypto::public_key));
+
+            crypto::key_derivation derivation;
+            if (!crypto::generate_key_derivation(tx_R_key, this->view_sec, derivation))
+            {
+              running_global_output_index++;
+              continue;
+            }
+            crypto::public_key P_candidate;
+            if (!crypto::derive_public_key(derivation, out_idx_in_tx, this->spend_pub, P_candidate))
+            {
+              running_global_output_index++;
+              continue;
+            }
+
+            if (P_candidate == P_on_chain_crypto)
+            {
+              crypto::secret_key x_one_time_sk_crypto;
+              crypto::derive_secret_key(derivation, out_idx_in_tx, this->spend_sec, x_one_time_sk_crypto);
+              crypto::key_image ki;
+              crypto::generate_key_image(P_on_chain_crypto, x_one_time_sk_crypto, ki);
+
+              MDB_val ki_mdb_key{sizeof(crypto::key_image), (void *)ki.data};
+              MDB_val ki_mdb_value;
+              bool is_spent = (mdb_get(read_txn, dbi_key_images, &ki_mdb_key, &ki_mdb_value) == 0);
+
+              if (!is_spent)
+              {
+                uint64_t decoded_amount = 0; // Initialize
+                rct::key decoded_mask_a;     // This will be populated by decodeRctSimple
+
+                crypto::ec_scalar s_j_scalar;
+                crypto::derivation_to_scalar(derivation, out_idx_in_tx, s_j_scalar);
+                rct::key s_j_rct_key = rct::sk2rct(reinterpret_cast<const crypto::secret_key &>(s_j_scalar));
+
+                if (out_idx_in_tx >= current_tx.signature.ecdhInfo.size())
+                {
+                  // std::cerr << "Warning (WalletKeys::get_owned): out_idx_in_tx " << out_idx_in_tx
+                  //           << " is out of bounds for ecdhInfo. Skipping decode for this output." << std::endl;
+                  running_global_output_index++; // Still count this output for global index
+                  continue;
+                }
+
+                try
+                {
+                  // Corrected call to rct::decodeRctSimple:
+                  // It returns the amount and populates decoded_mask_a by reference.
+                  decoded_amount = rct::decodeRctSimple(
+                      current_tx.signature,
+                      s_j_rct_key,
+                      static_cast<unsigned int>(out_idx_in_tx), // Ensure type matches (unsigned int)
+                      decoded_mask_a,                           // Output parameter for the mask
+                      hwdev);
+
+                  // If decodeRctSimple did not throw, it was successful.
+                  SpendableOutputInfo info;
+                  info.amount = decoded_amount;
+                  info.sk_x = rct::sk2rct(x_one_time_sk_crypto);
+                  info.mask_a = decoded_mask_a;
+                  info.pk_on_chain = output_ctkey;
+                  info.global_index = running_global_output_index;
+                  owned_spendable_outputs.push_back(info);
+                }
+                catch (const std::exception &e)
+                {
+                  // std::cerr << "Warning (WalletKeys::get_owned): Failed to decode amount/mask for owned output. Global Idx Approx: "
+                  //           << running_global_output_index << ", Tx: " /* key_to_hex_helper(...) */
+                  //           << ", Output Idx in Tx: " << out_idx_in_tx << ". Error: " << e.what() << ". Skipping." << std::endl;
+                }
+              }
+            }
+            running_global_output_index++; // Increment for every output processed (owned or not, spent or not)
+          } // End loop through outputs in a transaction
+        } // End loop through transactions in a block
+      } // End loop through blocks
+      mdb_txn_abort(read_txn);
+      return owned_spendable_outputs;
+    } // End of get_owned
   };
 }
 
