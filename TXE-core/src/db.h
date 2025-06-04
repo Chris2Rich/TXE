@@ -46,7 +46,6 @@ namespace TXE
         MDB_dbi open_existing_dbi(const std::string &name, MDB_txn *txn)
 {
     MDB_dbi dbi;
-    // Use 0 as flags for mdb_dbi_open when you don't want MDB_CREATE
     if (mdb_dbi_open(txn, name.c_str(), 0, &dbi)) 
         throw std::runtime_error("Failed to open existing dbi: " + name + ". Ensure it was created during init.");
     return dbi;
@@ -144,7 +143,7 @@ namespace TXE
             }
 
             mdb_cursor_close(cursor);
-            mdb_txn_abort(txn); // Even for read-only transactions, you must close it
+            mdb_txn_abort(txn);
 
             return res;
         }
