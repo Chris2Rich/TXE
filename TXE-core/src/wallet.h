@@ -3,20 +3,19 @@
 
 #include <string>
 #include <vector>
-#include <fstream>        // For WalletKeys::save/load
-#include <stdexcept>      // For WalletKeys::save/load
-#include <cstring>        // For WalletKeys::save/load
-#include <iostream>       // For WalletKeys::save/load (optional, for errors)
-#include <openssl/evp.h>  // For WalletKeys::save/load
-#include <openssl/rand.h> // For WalletKeys::save/load
+#include <fstream>
+#include <stdexcept>
+#include <cstring>
+#include <iostream>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
 
-// --- Headers needed for get_owned ---
-#include <algorithm> // For std::sort
-#include <sstream>   // For key_to_hex_helper
-#include <iomanip>   // For key_to_hex_helper
-#include "db.h"      // For TXE::SimpleLMDB
-#include "tx.h"      // For TXE::tx, rct types, crypto types used by tx
-#include "block.h"   // For TXE::block
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
+#include "db.h"
+#include "tx.h"
+#include "block.h"
 #include "device/device.hpp"
 
 namespace TXE
@@ -24,10 +23,10 @@ namespace TXE
   struct SpendableOutputInfo
   {
     uint64_t amount;
-    rct::key sk_x;          // one-time secret key to spend P
-    rct::key mask_a;        // commitment mask 'a' for C = aG + amount*H
-    rct::ctkey pk_on_chain; // P (dest) and C (mask) as stored on chain
-    size_t global_index;    // global index of this output on the blockchain
+    rct::key sk_x;
+    rct::key mask_a;
+    rct::ctkey pk_on_chain;
+    size_t global_index;
   };
 
   struct WalletKeys
@@ -46,7 +45,6 @@ namespace TXE
     }
 
   private:
-    // Derive a 32-byte key from password+salt
     static void derive_key(const std::string &password, const crypto::hash &salt, unsigned char out_key[32])
     {
       const int iterations = 10000;
@@ -64,26 +62,21 @@ namespace TXE
   public:
     void save(const std::string &filename, const std::string &password)
     {
-      // 1) Open file
       std::ofstream f(filename, std::ios::binary);
       if (!f)
         throw std::runtime_error("Cannot open file for writing");
 
-      // 2) Generate random salt
       crypto::hash salt;
       if (RAND_bytes(reinterpret_cast<unsigned char *>(salt.data), sizeof(salt)) != 1)
         throw std::runtime_error("RAND_bytes failed");
 
-      // 3) Derive AES‑256 key
       unsigned char key[32];
       derive_key(password, salt, key);
 
-      // 4) Generate random IV (16 bytes)
       unsigned char iv[16];
       if (RAND_bytes(iv, sizeof(iv)) != 1)
         throw std::runtime_error("RAND_bytes failed");
 
-      // 5) Serialize plaintext blob (keys) into buffer
       unsigned char plaintext[sizeof(view_pub.data) + sizeof(view_sec.data) +
                               sizeof(spend_pub.data) + sizeof(spend_sec.data)];
       unsigned char *p = plaintext;
@@ -97,7 +90,6 @@ namespace TXE
       p += sizeof(spend_sec.data);
       int plaintext_len = p - plaintext;
 
-      // 6) Encrypt with AES‑256‑CBC + PKCS#7 (via OpenSSL EVP)
       EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
       if (!ctx)
         throw std::runtime_error("EVP_CIPHER_CTX_new failed");
@@ -113,7 +105,6 @@ namespace TXE
       EVP_CIPHER_CTX_free(ctx);
       int cipher_len = outlen1 + outlen2;
 
-      // 7) Write salt, iv, cipher_len, then ciphertext
       f.write((char *)&salt, sizeof(salt));
       f.write((char *)iv, sizeof(iv));
       uint32_t clen = cipher_len;
@@ -127,7 +118,6 @@ namespace TXE
       if (!f)
         throw std::runtime_error("Cannot open file for reading");
 
-      // 1) Read salt, iv, cipher_len
       crypto::hash salt;
       f.read((char *)&salt, sizeof(salt));
       unsigned char iv[16];
@@ -135,15 +125,12 @@ namespace TXE
       uint32_t cipher_len = 0;
       f.read((char *)&cipher_len, sizeof(cipher_len));
 
-      // 2) Read ciphertext
       std::vector<unsigned char> ciphertext(cipher_len);
       f.read((char *)ciphertext.data(), cipher_len);
 
-      // 3) Derive AES key
       unsigned char key[32];
       derive_key(password, salt, key);
 
-      // 4) Decrypt
       EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
       if (!ctx)
         throw std::runtime_error("EVP_CIPHER_CTX_new failed");
@@ -160,7 +147,6 @@ namespace TXE
       EVP_CIPHER_CTX_free(ctx);
       int p_len = outlen1 + outlen2;
 
-      // 5) Unpack keys from plaintext
       if ((size_t)p_len != sizeof(crypto::public_key) * 2 + sizeof(crypto::secret_key) * 2)
         throw std::runtime_error("Decrypted length mismatch");
 
@@ -179,27 +165,19 @@ namespace TXE
     }
 
     std::vector<SpendableOutputInfo> get_owned(
-    // SimpleLMDB &db, // db object might still be needed if other SimpleLMDB methods were used,
-                       // but not for raw MDB_cursor/MDB_get with handles.
-                       // Keeping it for now if key_to_hex_helper or other parts might use it.
-    MDB_txn *active_read_txn,       // The transaction is now passed in
-    MDB_dbi dbi_blocks_handle,      // Pre-opened DBI handle for "blocks"
-    MDB_dbi dbi_key_images_handle   // Pre-opened DBI handle for "key_images"
+    MDB_txn *active_read_txn,
+    MDB_dbi dbi_blocks_handle,
+    MDB_dbi dbi_key_images_handle
 )
 {
     std::vector<SpendableOutputInfo> owned_spendable_outputs;
     hw::device &hwdev = hw::get_device("default");
 
-    // NO mdb_txn_begin - transaction is passed in
-    // NO db.get_dbi - DBI handles are passed in
 
     std::vector<std::pair<uint64_t, TXE::block>> temp_block_storage;
     MDB_cursor *cursor_blocks;
-    // Use the passed-in dbi_blocks_handle
     if (mdb_cursor_open(active_read_txn, dbi_blocks_handle, &cursor_blocks))
     {
-        // We can't abort active_read_txn here as we don't own it.
-        // The caller must handle this.
         throw std::runtime_error("get_owned (block_scan): Failed to open cursor for blocks table using provided handle.");
     }
     MDB_val mdb_block_key, mdb_block_value;
@@ -213,7 +191,6 @@ namespace TXE
         }
         catch (const std::exception &e)
         {
-            // std::cerr << "Warning (WalletKeys::get_owned block_scan): Failed to deserialize a block. Skipping. Error: " << e.what() << std::endl;
         }
     }
     mdb_cursor_close(cursor_blocks);
@@ -272,7 +249,6 @@ namespace TXE
 
                     MDB_val ki_mdb_key{sizeof(crypto::key_image), (void *)ki.data};
                     MDB_val ki_mdb_value;
-                    // Use the passed-in dbi_key_images_handle and active_read_txn
                     bool is_spent = (mdb_get(active_read_txn, dbi_key_images_handle, &ki_mdb_key, &ki_mdb_value) == 0);
 
                     if (!is_spent)
@@ -312,7 +288,6 @@ namespace TXE
             } 
         } 
     } 
-    // NO mdb_txn_abort - transaction is managed by the caller
     return owned_spendable_outputs;
 }
   };
