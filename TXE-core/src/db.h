@@ -32,6 +32,7 @@ namespace TXE
         ~SimpleLMDB()
         {
             mdb_env_close(env);
+            env = nullptr;
         }
 
         MDB_dbi get_dbi(const std::string &name, MDB_txn *txn)
@@ -42,11 +43,20 @@ namespace TXE
             return dbi;
         }
 
+        MDB_dbi open_existing_dbi(const std::string &name, MDB_txn *txn)
+{
+    MDB_dbi dbi;
+    // Use 0 as flags for mdb_dbi_open when you don't want MDB_CREATE
+    if (mdb_dbi_open(txn, name.c_str(), 0, &dbi)) 
+        throw std::runtime_error("Failed to open existing dbi: " + name + ". Ensure it was created during init.");
+    return dbi;
+}
+
         void put(const std::string &table, const std::string &key, const std::string &value)
         {
             MDB_txn *txn;
             mdb_txn_begin(env, nullptr, 0, &txn);
-            MDB_dbi dbi = get_dbi(table, txn);
+            MDB_dbi dbi = open_existing_dbi(table, txn);
 
             MDB_val k{key.size(), (void *)key.data()};
             MDB_val v{value.size(), (void *)value.data()};
@@ -61,7 +71,7 @@ namespace TXE
         {
             MDB_txn *txn;
             mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
-            MDB_dbi dbi = get_dbi(table, txn);
+            MDB_dbi dbi = open_existing_dbi(table, txn);
 
             MDB_val k{key.size(), (void *)key.data()};
             MDB_val v;
@@ -81,7 +91,7 @@ namespace TXE
         {
             MDB_txn *txn;
             mdb_txn_begin(env, nullptr, 0, &txn);
-            MDB_dbi dbi = get_dbi(table, txn);
+            MDB_dbi dbi = open_existing_dbi(table, txn);
 
             MDB_val k{key.size(), (void *)key.data()};
             if (mdb_del(txn, dbi, &k, nullptr))
@@ -97,7 +107,7 @@ namespace TXE
             MDB_txn *txn;
             mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
 
-            MDB_dbi dbi = get_dbi(table, txn);
+            MDB_dbi dbi = open_existing_dbi(table, txn);
 
             MDB_stat stat;
             if (mdb_stat(txn, dbi, &stat))
@@ -118,7 +128,7 @@ namespace TXE
             if (mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn))
                 throw std::runtime_error("Failed to begin read transaction");
 
-            MDB_dbi dbi = get_dbi(table, txn);
+            MDB_dbi dbi = open_existing_dbi(table, txn);
 
             MDB_cursor *cursor;
             if (mdb_cursor_open(txn, dbi, &cursor))

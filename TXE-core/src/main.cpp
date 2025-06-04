@@ -514,6 +514,70 @@ TXE::block create_deterministic_genesis_block(
     return genesis_block_obj;
 }
 
+bool print_all_dbis(MDB_env *env) {
+    if (!env) {
+        std::cerr << "Error: Provided MDB_env is null." << std::endl;
+        return false;
+    }
+
+    MDB_txn *txn = nullptr;
+    MDB_dbi main_dbi; // The main DBI that stores names of other DBIs
+    MDB_cursor *cursor = nullptr;
+
+    // 1. Start a read-only transaction
+    int rc = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
+    if (rc != 0) {
+        std::cerr << "Error beginning read-only transaction: " << mdb_strerror(rc) << std::endl;
+        return false;
+    }
+
+    // 2. Open the main database (which contains the names of all sub-databases)
+    //    The main database is opened by passing NULL as the name.
+    //    No flags are needed for opening an existing DBI in a read-only transaction.
+    rc = mdb_dbi_open(txn, nullptr, 0, &main_dbi);
+    if (rc != 0) {
+        std::cerr << "Error opening main DBI: " << mdb_strerror(rc) << std::endl;
+        mdb_txn_abort(txn);
+        return false;
+    }
+
+    // 3. Open a cursor on the main DBI
+    rc = mdb_cursor_open(txn, main_dbi, &cursor);
+    if (rc != 0) {
+        std::cerr << "Error opening cursor on main DBI: " << mdb_strerror(rc) << std::endl;
+        // mdb_dbi_close(env, main_dbi); // Not strictly necessary to close DBI handle here as txn abort will handle it
+        mdb_txn_abort(txn);
+        return false;
+    }
+
+    std::cout << "Named DBIs found in the environment:" << std::endl;
+    MDB_val key, data; // We only care about the key (DBI name)
+    size_t count = 0;
+
+    // 4. Iterate through the entries (DBI names)
+    while ((rc = mdb_cursor_get(cursor, &key, &data, MDB_NEXT)) == 0) {
+        std::string dbi_name(static_cast<char*>(key.mv_data), key.mv_size);
+        std::cout << "  - " << dbi_name << std::endl;
+        count++;
+    }
+
+    if (rc != MDB_NOTFOUND) { // MDB_NOTFOUND is expected at the end of iteration
+        std::cerr << "Error during cursor iteration: " << mdb_strerror(rc) << std::endl;
+    }
+    
+    if (count == 0) {
+        std::cout << "  (No named sub-databases found)" << std::endl;
+    }
+
+    // 5. Clean up
+    mdb_cursor_close(cursor);
+    // mdb_dbi_close(env, main_dbi); // DBI handles are associated with an environment but typically "closed" by LMDB when not in use or env closes.
+                                   // Explicitly closing is not usually done for DBIs opened within a transaction unless you have many and hit max.
+    mdb_txn_abort(txn); // Abort the read-only transaction
+
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2)
@@ -528,8 +592,8 @@ int main(int argc, char *argv[])
 
     if (std::string(argv[1]) == "init")
     {
-        TXE::SimpleLMDB db("./lmdb_data");
         std::filesystem::remove_all("./lmdb_data");
+        TXE::SimpleLMDB db("./lmdb_data");
         MDB_txn *txn;
         if (mdb_txn_begin(db.env, nullptr, 0, &txn))
             throw std::runtime_error("Failed to begin init transaction");
@@ -545,6 +609,8 @@ int main(int argc, char *argv[])
         if (mdb_txn_commit(txn))
             throw std::runtime_error("Failed to commit init transaction");
 
+        print_all_dbis(db.env);
+
         std::cout << "LMDB initialized with tables: blocks, key_images, ring_members, transactions, outputs" << std::endl;
 
         crypto::secret_key genesis_key;
@@ -554,6 +620,7 @@ int main(int argc, char *argv[])
         std::memcpy(genesis_key.data, seed_hash.data, sizeof(genesis_key.data));
         TXE::block genesis = create_deterministic_genesis_block(db, hw::get_device("default"), genesis_key);
         TXE::block::add_block_to_db(genesis, &db);
+        mdb_env_sync(db.env, 1);
     }
     if (std::string(argv[1]) == "wallet")
     {
@@ -616,17 +683,34 @@ int main(int argc, char *argv[])
         TXE::SimpleLMDB db("./lmdb_data");
         hw::device &hwdev = hw::get_device("default");
 
-        // --- Get Owned Outputs by Calling WalletKeys::get_owned ---
-        std::cout << "Scanning blockchain for spendable outputs... This may take some time if using block scan." << std::endl;
-        std::vector<TXE::SpendableOutputInfo> owned_outputs; // TXE:: namespace for clarity
-        try {
-            owned_outputs = sender_wallet.get_owned(db); // This now calls your implemented get_owned
-            std::cout << "Wallet sync complete." << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Error during wallet sync (get_owned call): " << e.what() << std::endl;
-            return 1;
-        }
-        
+        print_all_dbis(db.env);
+
+MDB_txn *wallet_scan_txn = nullptr;
+MDB_dbi dbi_blocks_main = 0;
+MDB_dbi dbi_key_images_main = 0;
+std::vector<TXE::SpendableOutputInfo> owned_outputs;
+
+try {
+    if (mdb_txn_begin(db.env, nullptr, MDB_RDONLY, &wallet_scan_txn)) {
+        throw std::runtime_error("Failed to begin transaction for wallet scan.");
+    }
+    dbi_blocks_main = db.open_existing_dbi("blocks", wallet_scan_txn); // Using existing SimpleLMDB::get_dbi
+    dbi_key_images_main = db.open_existing_dbi("key_images", wallet_scan_txn);
+
+    std::cout << "Scanning blockchain for spendable outputs (external transaction)..." << std::endl;
+    owned_outputs = sender_wallet.get_owned(wallet_scan_txn, dbi_blocks_main, dbi_key_images_main);
+    
+    mdb_txn_abort(wallet_scan_txn); // Abort the read-only transaction
+    wallet_scan_txn = nullptr; // Mark as handled
+    std::cout << "Wallet sync complete." << std::endl;
+
+} catch (const std::exception& e) {
+    if (wallet_scan_txn) {
+        mdb_txn_abort(wallet_scan_txn);
+    }
+    std::cerr << "Error during wallet sync or DB setup: " << e.what() << std::endl;
+    return 1;
+}
         // Note: The local 'SpendableOutputInfo' struct definition previously here is removed,
         // as it's assumed to be globally available from an included header (e.g., wallet.h).
 
